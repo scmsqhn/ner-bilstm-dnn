@@ -548,13 +548,13 @@ class Bilstm_Att(object):
         self.decay = 0.85
         max_len = 200# 句子长度
         self.timestep_size =  200
-        self.vocab_size = 100208# 样本中不同字的个数+1(padding 0)，根据处理数据的时候得到
+        self.vocab_size = 400000# 样本中不同字的个数+1(padding 0)，根据处理数据的时候得到
         self.input_size = 64
-        self.embedding_size = 256# 字向量长度
+        self.embedding_size = 128# 字向量长度
         self.class_num = len(self.tags)
-        self.hidden_size = 256# 隐含层节点数
-        self.layer_num = 4        # bi-lstm 层数
-        self.max_grad_norm = 9.0  # 最大梯度（超过此值的梯度将被裁剪）
+        self.hidden_size = 128# 隐含层节点数
+        self.layer_num = 2        # bi-lstm 层数
+        self.max_grad_norm = 5.0  # 最大梯度（超过此值的梯度将被裁剪）
         self.model_save_path = _path("model/bilstm.ckpt") # 模型保存位置
         self.checkpoint_path = _path("model")  # 模型保存位置
         _print(self.model_save_path)
