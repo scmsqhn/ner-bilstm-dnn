@@ -793,11 +793,12 @@ class Bilstm_Att(object):
         y = tf.reshape(self.y_inputs, [-1])
         y_ = tf.cast(tf.argmax(self.attention, 1), tf.int32)
 
-        self.cost_pre = tf.reduce_mean(tf.cast(tf.where(tf.greater(y, y_), 10*(y-y_), (y_-y)), tf.float64))
-        #self.cost_ = tf.reduce_mean(tf.cast(tf.where(tf.greater(y, y_), (y-y_)*20, (y_-y)), tf.float64))
+        self.wrong_zero= tf.reduce_mean(tf.cast(tf.where(tf.greater(y, y_), 1*(y-y_), 0*(y_-y)), tf.float32))
+        self.wrong_one= tf.reduce_mean(tf.cast(tf.where(tf.greater(y, y_), 0*(y-y_), 1*(y_-y)), tf.float32))
+        #self.cost_ = tf.reduce_mean(tf.cast(tf.where(tf.greater(y, y_), (y-y_)*20, (y_-y)), tf.float32))
         self.cost_base = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
         #self.cost_base = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = tf.clip_by_value(self.attention, -1, 1, name=None))) #self.attention))
-        self.cost = 1000.0*tf.cast(self.cost_pre,tf.float64)*tf.cast(self.cost_base,tf.float64)
+        self.cost = tf.cast(self.cost_base,tf.float32)
         #self.cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = tf.cast(tf.one_hot(tf.argmax(self.attention,1),3), tf.float32)))
         #tmp_y = tf.reshape(tf.cast(tf.one_hot(self.y_inputs,3), tf.int32), [-1])
         #tmp_y_ = tf.reshape(tf.cast(tf.one_hot(tf.argmax(self.attention,1),3), tf.int32),[-1])
@@ -874,6 +875,24 @@ class Bilstm_Att(object):
         tf.add_to_collection('keep_prob', self.keep_prob)
         tf.add_to_collection('attention', self.attention)
 
+    def prtvar(self, varName):
+        try:
+            varValue = locals()[varName] 
+            inp = varName
+            if type(inp) == list:
+                print(varName,": ", ",".join([str(i) for i in varValue]))
+            elif type(inp) == dict:
+                print(varName,": ", ",".join([str(i) for i in list(varValue.items())]))
+            elif type(inp) == set:
+                print(varName,": ", ",".join([str(i) for i in list(varValue)]))
+            elif type(inp) == str:
+                print(varName,": ",varValue)
+            else:
+                print(varName,": ",varValue)
+        except:
+           return "Sorry, there is no var named %s"% varName
+
+
     def fit_train(self, sess):
         pass
         tvars = tf.trainable_variables()  # 获取模型的所有参数
@@ -897,7 +916,7 @@ class Bilstm_Att(object):
         #print(saver)
         sess.run(tf.global_variables_initializer())
         test_fetches = [self.attention, self.accuracy, self.cost, self.train_op, self.y_pred]
-        train_fetches = [self.attention, self.accuracy, self.cost, self.train_op, self.cost_pre]
+        train_fetches = [self.attention, self.accuracy, self.cost, self.train_op, self.wrong_zero, self.wrong_one]
         #train_att_fetches = [self.att_layer.accuracy, self.att_layer.train_op, self.att_layer.predictions]
         #gen = self.datahelper.gen_train_data("train")
         for epoch in range(self.max_max_epoch):
@@ -910,21 +929,27 @@ class Bilstm_Att(object):
                 _acc = 0.0
                 X_batch, y_batch = self.batch_gen.__next__()
                 feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:self._lr, self.batch_size:self.btsize, self.keep_prob:0.5}
-                _att, _acc, _cost, _, c_ = sess.run(train_fetches, feed_dict) # the self.cost is the mean self.cost of one batch
+                res_att, res_acc, res_cost, res_op, res_w_zero, res_w_one \
+                    = sess.run(train_fetches, feed_dict) # the self.cost is the mean self.cost of one batch
                 #att_feed_dict={self.att_layer.input_x:self.textcnn_data_transform(_att,5), self.att_layer.input_y:tf.reshape(tf.one_hot(y_batch,1),(1000,8)), self.att_layer.dropout_keep_prob:0.5 }
                 #_att_acc, _att_op, _att_pred, _ = sess.run(train_att_fetches, att_feed_dict) # the self.cost is the mean self.cost of one batch
                 #_print(dict(zip(["_att_acc", "_att_op", "_att_pred"],[ _att_acc, _att_op, _att_pred])))
-                _print("\n> y_inputs: ",list(y_batch))
-                _print("\n> self.attention: ",_att)
-                _print("\n> _att :",_att," _acc:",_acc," _cost:",_cost)
+                _print(self.prtvar("y_batch"))
+                _print(self.prtvar("res_att"))
+                _print(self.prtvar("res_acc"))
+                _print(self.prtvar("res_cost"))
+                _print(self.prtvar("res_op"))
+                _print(self.prtvar("res_w_zero"))
+                _print(self.prtvar("res_w_one"))
+                _print(self.prtvar(y_batch))
                 _print("===============================")
-                _print("\n> attention 预测输出", np.argmax(_att))
+                pred_tri = np.argmax(res_att.reshape(6400,3),1)
+                _print(self.prtvar(pred_tri))
                 _print("===============================")
-                _print("\n> perenal cost design cost_ :", c_)
                 #_accs += _acc
                 #_costs += _cost
                 show_accs += _acc
-                show_costs += _cost
+                show_costs += res_cost
                 #_print("show_accs, show_costs, _accs, _costs")
                 print("acc cost average")
                 if batch%5==1:
