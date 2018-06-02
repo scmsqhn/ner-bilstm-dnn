@@ -249,7 +249,7 @@ class Eval_Ner(object):
             _print("\n> corr", _corr)
             #_print("\n> _acc_average", (_acc_average+_acc)/cnt)
             y_=np.argmax(_y_pred_meta.reshape(6400,3),1).reshape(32,200)
-            pdb.set_trace()
+            # pdb.set_trace()
             y=y_batch.reshape(32,200)
             x=X_batch.reshape(32,200)
             w=W_batch.reshape(32,200)
@@ -299,8 +299,8 @@ class Eval_Ner(object):
                 f.write("\n> 提取文本: "+ts+"\n\n")
                 #print(table)
                 #_print(table)
-            if rec_dict['cnt'] %100==0 and rec_dict['cnt']>100:
-                dct.save("./model/my.dct.bak")
+            #if rec_dict['cnt'] %100==0 and rec_dict['cnt']>100:
+            #    dct.save("./model/my.dct.bak")
         #pdb.set_trace()
         f.close()
         #return result, y_batch, _y_pred_meta.reshape(2000,8)
