@@ -217,7 +217,7 @@ class Eval_Ner(object):
         dct=gensim.corpora.Dictionary.load("./model/my.dct.bak")
         self.dct=dct
         datasrc = self.data_helper
-        gen = datasrc.gen_train_data("eval")
+        gen = datasrc.gen_eval(funcname="gen_eval",columns_name="text",columns_name_tar="addrcrim",db="myDB",coll="traindata", begin_cursor=0, end_cursor=300)
         batch_gen=datasrc.next_batch_eval(gen)
         n=1
         _acc, _acc_average =  0.0, 0.0
@@ -241,7 +241,7 @@ class Eval_Ner(object):
             feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-4, self.batch_size:32, self.keep_prob:1.0}
             #_print("y_pred 预测值是:", sess.run(y_pred_meta, feed_dict=feed_dict))
             fetches = [self.correct_prediction, self.y_pred_meta, self.accuracy]
-            _corr, _y_pred_meta, _acc = self.sess.run(fetches, feed_dict=feed_dict) # the cost is the mean cost of one batch
+            _corr, _y_pred_meta, _acc = self.sess.run(fetches, feed_dict) # the cost is the mean cost of one batch
             #viterbi_out = viterbi(_y_pred_meta)
             _print("\n> _y_pred_meta", _y_pred_meta, _y_pred_meta.shape)
             #_print("\n> _y_pred_tags", [self.tag_map(i) for i in _y_pred_meta])
@@ -262,48 +262,40 @@ class Eval_Ner(object):
                 #table = PrettyTable(["_id","predict/y_inputi/x_input"])
                 #table.sort_key("_id")
                 #table.reversesort = True
-                bs=""
-                ss=""
-                ts=""
+                yStr=""
+                predStr=""
+                xIdStr=""
+                wordStr=""
                 for m in range(0, 200):
                     #pdb.set_trace()
-                    bs+=w[i][m]
                     cnt=200*i+m
                     pred_sample=y_[i][m]# y of pred
                     y_sample=y[i][m]# y of label
                     x_sample=dct.get(x[i][m])#x of id ==> x of word
+                    w_sample=(w[i][m])#x of id ==> x of word
+                    wordStr+=w_sample
                     if x_sample==None:
                        x_sample="None"
                        dct.add_documents([["None"]])
-                       dct.save('./model/my.dct.bak')
                        #x_sample = "None"
-                    #s+="; "
-                    assert not x_sample == None
+                       #s+="; "
+                       assert not x_sample == None
+                    xIdStr+=x_sample
+                    print(pred_sample)
                     if pred_sample==1 or pred_sample==2:
-                      ts+=str(x_sample)
-                    ss+=x_sample
-                    #_print_pred(ss)
-                    #_print_pred(ts)
-                    #pdb.set_trace() 
-                    #judge_para = (y,y_)
-                    #table.add_row([cnt,s])
-                    #_print_pred("\n> 预测:",y_,",标签:",y,",词语:",x)
-                    #judge_lst.append(self.judge(*judge_para))
-                    ##print(np.argmax(_y_pred_meta[cnt]), y_batch[i][m], w2vm.similar_by_vector(X_batch[i][m])[0][0])
+                        predStr+=w_sample
+                    print(y_sample)
+                    if y_sample==1 or y_sample==2:
+                        yStr+=w[i][m]
                     if X_batch[i][m] == 244:
-                        break#continue
-                f.write("\n> 目标文本: "+ss)
-                if ts=="":
-                    ts="该行文本未能检出"
-                f.write("\n> base text: "+bs+"\n\n")
-                f.write("\n> 提取文本: "+ts+"\n\n")
-                #print(table)
-                #_print(table)
-            #if rec_dict['cnt'] %100==0 and rec_dict['cnt']>100:
-            #    dct.save("./model/my.dct.bak")
-        #pdb.set_trace()
+                        break
+                f.write("\n> text: "+wordStr+"\n\n")
+                if predStr=="":
+                    predStr="该行文本未能检出"
+                f.write("\n> wordid_rever: "+xIdStr+"\n\n")
+                f.write("\n> mark文本: "+yStr+"\n\n")
+                f.write("\n> output文本: "+predStr+"\n\n")
         f.close()
-        #return result, y_batch, _y_pred_meta.reshape(2000,8)
 
     def run_sent(self, sent):
         result, _, _= self.predict_sent(sent)

@@ -805,10 +805,9 @@ class Data_Helper(object):
             c2n,n2c=self.get_lb()
             _print('this is the func gen_train_text_classify_from_text')
             words2dlst,y_inputs = self.read_file_2d_lst(dirpath,filename)
-            count=_collections.count()-begin_cursor
             count=len(words2dlst)
             end_cursor = count
-            self._vali_equal(counr,begin_cursor,">","gen_train_text_classify_from_text")
+            self._vali_equal(count,begin_cursor,">","gen_train_text_classify_from_text")
             self._vali_equal(end_cursor,begin_cursor,">",'gen_train_text_classify_from_text')#断言end_cursor>begin_cursor
             #ev = bilstm.eval_bilstm.Eval_Ner()
             #get_mongo_coll( 'myDB', "traindata")
@@ -838,9 +837,9 @@ class Data_Helper(object):
         _ids,_tags,_words,_lbs=[],[],[],[]
         while(1):
             _id,_tag,_word,_lb=gen.__next__()
-            _vali_equal(len(_id), len(_word))
-            _vali_equal(len(_id), 200)
-            _vali_equal(len(_tag), self.btsize)
+            self._vali_equal(len(_id), len(_word))
+            self._vali_equal(len(_id), 200)
+            self._vali_equal(len(_tag), self.btsize)
             _ids.extend(_id)
             _tags.extend(_tag)
             _words.extend(_word)
