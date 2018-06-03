@@ -400,11 +400,15 @@ def update_one(dct,coll):
     coll.insert(dct)
   except:
     traceback.print_exc()
+
 def addr_cls():
   ac = Addr_Classify(["北京天安门","富强文明"])
   coll0 = myDB['traindata']
   coll1 = myDB['original_data']
-  coll2 = myDB['ner_addr_crim_sample']
+  coll2 = myDB['gz_gongan_alarm_1617']
+  coll3 = myDB['gz_gongan_case']
+
+  """
   for i in coll1.find():
     try:
       cont = i['casdetail']
@@ -415,9 +419,20 @@ def addr_cls():
     except:
       traceback.print_exc()
       continue
+  """
+  for i in coll3.find():
+    try:
+      cont = i['jyaq']
+      res = pick_addr(ac,cont)
+      if res ==-1:
+        continue
+      update_one(res, coll0)
+    except:
+      traceback.print_exc()
+      continue
   for i in coll2.find():
     try:
-      cont = i['text']
+      cont = i['反馈内容']
       res = pick_addr(ac,cont)
       if res ==-1:
         continue

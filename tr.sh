@@ -38,6 +38,11 @@ elif [ $trorev -eq 4 ]
     #echo $trorev
     python /home/distdev/bilstm/eval_bilstm.py
     echo "python eval_bilstm.py"
+elif [ $trorev -eq 5 ]
+  then
+    #echo $trorev
+    python /home/distdev/bilstm/text_filter.bilstm.py
+    echo "/home/distdev/bilstm/text_filter.bilstm.py"
 elif [ $trorev -eq 0 ]
   then
     #echo $trorev

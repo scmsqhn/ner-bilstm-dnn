@@ -141,13 +141,13 @@ class Eval_Ner(object):
         self.lr=tf.get_collection("lr")[0]
         self.batch_size=tf.get_collection("batch_size")[0]
         self.keep_prob=tf.get_collection('keep_prob')[0]
-        self.FP = tf.get_collection('FP')
-        self.TN = tf.get_collection('TN')
-        self.FN = tf.get_collection('FN')
-        self.TP = tf.get_collection('TP')
-        self.Precision = tf.get_collection('Precision')
-        self.Recall = tf.get_collection('Recall')
-        self.Fscore = tf.get_collection('Fscore')
+        self.FP = tf.get_collection('FP')[0]
+        self.TN = tf.get_collection('TN')[0]
+        self.FN = tf.get_collection('FN')[0]
+        self.TP = tf.get_collection('TP')[0]
+        self.Precision = tf.get_collection('Precision')[0]
+        self.Recall = tf.get_collection('Recall')[0]
+        self.Fscore = tf.get_collection('Fscore')[0]
         self.correct_prediction = tf.equal(tf.cast(tf.argmax(self.y_pred_meta, 1), tf.int32), tf.reshape(self.y_inputs, [-1]))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
         #pdb.set_trace()
@@ -225,10 +225,10 @@ class Eval_Ner(object):
         dct=gensim.corpora.Dictionary.load("./model/my.dct.bak")
         self.dct=dct
         datasrc = self.data_helper
-        evalgen = datasrc.gen_train_data("eval")
-        gen = datasrc.gen_eval(funcname="gen_eval",columns_name="text",columns_name_tar="addrcrim",db="myDB",coll="traindata", begin_cursor=0, end_cursor=100)
-        batch_gen=datasrc.next_batch_eval(gen)
-        eval_batch_gen=datasrc.next_batch_eval(evalgen)
+        evalGen = datasrc.gen_train_data("eval")
+        evalTaiyuanGen = datasrc.gen_train_data("evalTaiyuan")
+        batcheEval=datasrc.next_batch_eval(evalGen)
+        batchEvalTaiyuan=datasrc.next_batch_eval(evalTaiyuanGen)
         n=1
         _acc, _acc_average =  0.0, 0.0
         _y_batch_lst = []
@@ -243,10 +243,24 @@ class Eval_Ner(object):
             rec_dict['cnt']+=1
             #pdb.set_trace()
             X_batch, y_batch, W_batch = "","",""
+            #if rec_dict['cnt']<-20:
+            #    pass
+            #    continue
             if rec_dict['cnt']<3:
-                X_batch, y_batch, W_batch=batch_gen.__next__()
-            elif rec_dict['cnt']<6:
-                X_batch, y_batch, W_batch=eval_batch_gen.__next__()
+                X_batch, y_batch, W_batch=batchEvalTaiyuan.__next__()
+            elif rec_dict['cnt']<600:
+                X_batch, y_batch =batcheEval.__next__()
+                W_batch = []
+                for i in X_batch:
+                    words = []
+                    for j in i:
+                        ret = self.dct.get(j)
+                        if ret == None:
+                            words.append("None")
+                        else:
+                            words.append(ret)
+                    W_batch.append(words)
+                W_batch = np.array(W_batch)
             else:
                 break
             #pdb.set_trace()
@@ -254,7 +268,7 @@ class Eval_Ner(object):
             #pdb.set_trace()
             _print(X_batch.shape)
             _print(y_batch.shape)
-            pdb.set_trace()
+            #pdb.set_trace()
             feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.batch_size:32, self.keep_prob:1.0}
             #feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-4, self.batch_size:32, self.keep_prob:1.0}
             #_print("y_pred 预测值是:", sess.run(y_pred_meta, feed_dict=feed_dict))
@@ -263,8 +277,11 @@ class Eval_Ner(object):
             [_corr, _y_pred_meta, _acc, _tp,_tn,_fp,_fn,_precision,_recall,_fscore] = self.sess.run(fetches, feed_dict=feed_dict) # the cost is the mean cost of one batch
             myvars = [_corr,_y_pred_meta,_acc,_tp,_tn,_fp,_fn,_precision,_recall,_fscore]
             names = ['_corr', '_y_pred_meta','_acc','_tp','_tn','_fp','_fn','_precision','_recall','_fscore']
-            for i,j in zip(myvars,names):
-                _print(j, i)
+            for i in range(len(names)):
+                try:
+                    _print(names[i], myvars[i])
+                except:
+                    _print(names[i], "None")
        
             y_=np.argmax(_y_pred_meta.reshape(6400,3),1).reshape(32,200)
             # pdb.set_trace()
@@ -307,12 +324,12 @@ class Eval_Ner(object):
                         yStr+=w[i][m]
                     if X_batch[i][m] == 244:
                         break
-                f.write("\n> text: "+wordStr+"\n\n")
+                f.write("\n> text: "+wordStr+"\n")
                 if predStr=="":
                     predStr="该行文本未能检出"
-                f.write("\n> wordid_rever: "+xIdStr+"\n\n")
-                f.write("\n> mark文本: "+yStr+"\n\n")
-                f.write("\n> output文本: "+predStr+"\n\n")
+                #f.write("\n> wordid_rever: "+xIdStr+"\n\n")
+                #f.write("\n> mark文本: "+yStr+"\n\n")
+                f.write("\n> output文本: "+predStr+"\n===")
         f.close()
 
     def run_sent(self, sent):

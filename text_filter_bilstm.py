@@ -36,6 +36,7 @@ sys.path.append(PARPATH)
 sys.path.append(CURPATH)
 #from bilstm import addr_classify
 #from bilstm import eval_bilstm
+sys.path.append("/home/distdev")
 import bilstm
 from bilstm import datahelper
 from bilstm.datahelper import Data_Helper
@@ -536,8 +537,8 @@ class Bilstm_Att(object):
     def init_bi_lstm(self):
         """build the bi-LSTMs network. Return the self.y_pred"""
         # self.X_inputs.shape = [batchsize, self.timestep_size]  -  inputs.shape = [batchsize, self.timestep_size, embedding_size]
-        #inputs = tf.nn.embedding_lookup(self.embedding, self.X_inputs)
-        inputs = self.X_inputs
+        inputs = tf.nn.embedding_lookup(self.embedding, self.X_inputs)
+        #inputs = self.X_inputs
         int_inputs = tf.cast(inputs, tf.int32)
         float_inputs = tf.cast(inputs, tf.float32)
         # ** 1.构建前向后向多层 LSTM
@@ -578,8 +579,8 @@ class Bilstm_Att(object):
 
     def input_placeholder(self):
         with tf.variable_scope('Inputs'):
-            self.X_inputs = tf.placeholder(tf.float32, [32, self.timestep_size,self.embedding_size], name='X_input')
-            self.y_inputs = tf.placeholder(tf.int32, [32, self.cnn_classify_num], name='y_input')
+            self.X_inputs = tf.placeholder(tf.float32, [32, self.timestep_size], name='X_input')
+            self.y_inputs = tf.placeholder(tf.int32, [32 ,1], name='y_input')
 
     def init_outputs(self):
         with tf.variable_scope('outputs'):
@@ -643,15 +644,14 @@ class Bilstm_Att(object):
         return tf.cast(_data,dtype=_format)
 
     def init_cnn(self):
-        a=tf.reshape(self.X_inputs,(6400,128))
+        a=tf.reshape(self.X_inputs,(6400, 1))
         _b=tf.reshape(self.attention, [-1])
-        __b = tf.expand_dims(_b, -1)
         b=self.data_format(__b, tf.float32)
         c=tf.multiply(a,b)
         if Const.DEBUG == "True":
             pdb.set_trace()
-        d = tf.reshape(c,(32,self.timestep_size*self.embedding_size))
-        inputy = tf.one_hot(self.y_inputs,18)
+        d = tf.reshape(c,(32,self.timestep_size))
+        inputy = self.y_inputs
         cnn_model = cnn(
             sequence_length=32,
             num_classes=18,
@@ -671,7 +671,7 @@ class Bilstm_Att(object):
         self.lr = tf.placeholder(tf.float32, [])
         self.keep_prob = tf.placeholder(tf.float32, [])
         self.batch_size = tf.placeholder(tf.int32, [])  # 注意类型必须为 tf.int32
-        #self.init_embedding()
+        self.init_embedding()
         self.bilstm_output = self.init_bi_lstm()
         #self.init_bi_lstm()
         self.init_outputs()

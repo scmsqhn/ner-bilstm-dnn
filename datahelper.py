@@ -512,9 +512,14 @@ class Data_Helper(object):
       g = ""
       if name == "train":
           g = self.gen_train()
+      elif name =="eval":
+          g = self.gen_train(begin_cursor=0,db='myDB',coll='traindata',textcol='text',targetcol='addrcrim',funcname='gen_train')
+          #g = self.gen_eval(funcname="gen_eval",columns_name="text",columns_name_tar="addrcrim",db="myDB",coll="traindata",begin_cursor=0,end_cursor=100)
+      elif name =="evalTaiyuan":
+          g = self.gen_eval(funcname="gen_eval",columns_name="casdetail",columns_name_tar="",db="myDB",coll="original_data",begin_cursor=0,end_cursor=100)
+          #gen = datasrc.gen_eval(funcname="gen_eval",columns_name="text",columns_name_tar="addrcrim",db="myDB",coll="traindata", begin_cursor=0, end_cursor=100)
       else:
-          pass#pdb.set_trace()
-          g = self.gen_eval()
+          pass
       return g
 
     def format_str(self, *para):
@@ -824,7 +829,7 @@ class Data_Helper(object):
             i+=1
             print("\n>counter:",i)
             if i==self.btsize:
-                yield self.toArr(_ids,self.btsize,200), self.toArr(np.one_hot(_tags),self.btsize,18), self.toArr(_words,self.btsize,200), self.toArr(np.one_hot(_ids),self.btsize,18)
+                yield self.toArr(_ids,self.btsize,200), self.toArr(np.one_hot(_tags),self.btsize,18), self.toArr(_words,self.btsize,200), self.toArr(_lbs,self.btsize,1)
                 _ids,_tags,_words,_lbs=[],[],[],[]
                 i=0
             #import pdb
@@ -841,7 +846,7 @@ class Data_Helper(object):
             i+=1
             print("\n>counter:",i)
             if i==self.btsize:
-                yield self.toArr(_ids,self.btsize,200), self.toArr(_tags,self.btsize,200), self.toArr(_words,self.btsize,200)
+                yield self.toArr(_ids,self.btsize,200), self.toArr(_tags,self.btsize,200), self.toArr(_words, self.btsize,200)
                 if Const.DEBUG=="True":
                     print("next_batch_eval")
                     pass#pdb.set_trace()
