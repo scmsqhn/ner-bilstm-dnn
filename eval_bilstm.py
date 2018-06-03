@@ -132,14 +132,21 @@ class Eval_Ner(object):
         ckpt = tf.train.get_checkpoint_state('./model/')
         saver = tf.train.import_meta_graph(ckpt.model_checkpoint_path +'.meta')
         saver.restore(self.sess, ckpt.model_checkpoint_path)
-        graph = tf.get_default_graph()
+        #graph = tf.get_default_graph()
         self.X_inputs=tf.get_collection("model.X_inputs")[0]
         self.y_inputs=tf.get_collection("model.y_inputs")[0]
         #self.y_pred_meta=tf.get_collection("model.y_pred")[0]
         self.y_pred_meta=tf.get_collection("attention")[0]
         self.lr=tf.get_collection("lr")[0]
         self.batch_size=tf.get_collection("batch_size")[0]
-        self.keep_prob=tf.get_collection("keep_prob")[0]
+        self.keep_prob=tf.get_collection('keep_prob')[0]
+        self.FP = tf.get_collection('FP')
+        self.TN = tf.get_collection('TN')
+        self.FN = tf.get_collection('FN')
+        self.TP = tf.get_collection('TP')
+        self.Precision = tf.get_collection('Precision')
+        self.Recall = tf.get_collection('Recall')
+        self.Fscore = tf.get_collection('Fscore')
         self.correct_prediction = tf.equal(tf.cast(tf.argmax(self.y_pred_meta, 1), tf.int32), tf.reshape(self.y_inputs, [-1]))
         self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
         #pdb.set_trace()
@@ -167,7 +174,7 @@ class Eval_Ner(object):
         X_batch, y_batch = np.array(sent_data).reshape(32,200), np.array([0]*2000).reshape(32,200)
         _print(X_batch.shape)
         _print(y_batch.shape)
-        feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-4, self.batch_size:10, self.keep_prob:1.0}
+        feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-4, self.batch_size:32, self.keep_prob:1.0}
         #_print("y_pred 预测值是:", sess.run(y_pred_meta, feed_dict=feed_dict))
         fetches = [self.correct_prediction, self.y_pred_meta, self.accuracy]
         _corr, _y_pred_meta, _acc = self.sess.run(fetches, feed_dict=feed_dict) # the cost is the mean cost of one batch
@@ -217,8 +224,10 @@ class Eval_Ner(object):
         dct=gensim.corpora.Dictionary.load("./model/my.dct.bak")
         self.dct=dct
         datasrc = self.data_helper
-        gen = datasrc.gen_eval(funcname="gen_eval",columns_name="text",columns_name_tar="addrcrim",db="myDB",coll="traindata", begin_cursor=0, end_cursor=300)
+        evalgen = datasrc.gen_train_data("eval")
+        gen = datasrc.gen_eval(funcname="gen_eval",columns_name="text",columns_name_tar="addrcrim",db="myDB",coll="traindata", begin_cursor=0, end_cursor=100)
         batch_gen=datasrc.next_batch_eval(gen)
+        eval_batch_gen=datasrc.next_batch_eval(evalgen)
         n=1
         _acc, _acc_average =  0.0, 0.0
         _y_batch_lst = []
@@ -232,22 +241,30 @@ class Eval_Ner(object):
         while(1):
             rec_dict['cnt']+=1
             #pdb.set_trace()
-            X_batch, y_batch, W_batch=batch_gen.__next__()
+            X_batch, y_batch, W_batch = "","",""
+            if rec_dict['cnt']<3:
+                X_batch, y_batch, W_batch=batch_gen.__next__()
+            elif rec_dict['cnt']<6:
+                X_batch, y_batch, W_batch=eval_batch_gen.__next__()
+            else:
+                break
             #pdb.set_trace()
             #X_batch, y_batch = datasrc.next_batch('train')
             #pdb.set_trace()
             _print(X_batch.shape)
             _print(y_batch.shape)
-            feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-4, self.batch_size:32, self.keep_prob:1.0}
+            pdb.set_trace()
+            feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.batch_size:32, self.keep_prob:1.0}
+            #feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-4, self.batch_size:32, self.keep_prob:1.0}
             #_print("y_pred 预测值是:", sess.run(y_pred_meta, feed_dict=feed_dict))
-            fetches = [self.correct_prediction, self.y_pred_meta, self.accuracy]
-            _corr, _y_pred_meta, _acc = self.sess.run(fetches, feed_dict) # the cost is the mean cost of one batch
-            #viterbi_out = viterbi(_y_pred_meta)
-            _print("\n> _y_pred_meta", _y_pred_meta, _y_pred_meta.shape)
-            #_print("\n> _y_pred_tags", [self.tag_map(i) for i in _y_pred_meta])
-            #_print("\n> _acc", _acc)
-            _print("\n> corr", _corr)
-            #_print("\n> _acc_average", (_acc_average+_acc)/cnt)
+            fetches = [self.correct_prediction, self.y_pred_meta, self.accuracy, self.TP, self.TN, self.FP, self.FN, self.Precision, self.Recall,self.Fscore]
+            print(feed_dict)
+            [_corr, _y_pred_meta, _acc, _tp,_tn,_fp,_fn,_precision,_recall,_fscore] = self.sess.run(fetches, feed_dict=feed_dict) # the cost is the mean cost of one batch
+            myvars = [_corr,_y_pred_meta,_acc,_tp,_tn,_fp,_fn,_precision,_recall,_fscore]
+            names = ['_corr', '_y_pred_meta','_acc','_tp','_tn','_fp','_fn','_precision','_recall','_fscore']
+            for i,j in zip(myvars,names):
+                _print(j, i)
+       
             y_=np.argmax(_y_pred_meta.reshape(6400,3),1).reshape(32,200)
             # pdb.set_trace()
             y=y_batch.reshape(32,200)

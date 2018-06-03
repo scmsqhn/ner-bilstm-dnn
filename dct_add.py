@@ -30,4 +30,5 @@ run(col)
 run(col1)
 run(col2)
 mydct.save('./model/my.dct.bak')
+mydct.save('./model/my.dct')
 

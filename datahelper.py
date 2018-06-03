@@ -488,7 +488,13 @@ class Data_Helper(object):
         #pdb.set_trace()
         return result
 
+
     def clr_2_lst(self,sent):
+        print(sent)
+        res = [self.dwc(i) for i in list(jieba.cut(sent))]
+        return res
+
+    def faked_clr_2_lst(self,sent):
         print(sent)
         i = sent
         pass
@@ -531,12 +537,15 @@ class Data_Helper(object):
             res+=i
         return res
 
-    def dwc(self,sent):
-        sent = re.sub("[^\u4e00-\u9fa5a-z0-9A-Z]","",sent) # marker
-        sent = re.sub("[a-zA-Z]","C",sent) # char
-        sent = re.sub("[0-9]","3",sent) # num
+    def chdwc(self,sent):
+        sent = re.sub("[^\u4e00-\u9fa5]","",sent) # marker
         return sent
 
+    def dwc(self,sent):
+        sent = re.sub("[^\u4e00-\u9fa5a-z0-9A-Z@\.]","",sent) # marker
+        #sent = re.sub("[a-zA-Z]","C",sent) # char
+        #sent = re.sub("[0-9]","3",sent) # num
+        return sent
     def gen_train_data(self, name="eval"):
       g = ""
       if name == "train":
@@ -739,6 +748,7 @@ class Data_Helper(object):
                     print(Const.TARGETUSELESS)
                     continue
                 #=====　文本transform to str and list
+                pdb.set_trace()
                 txt = self.clr_2_str(_text)
                 lsttxt = self.clr_2_lst(_text)
                 result = self.split(_crim_res, _text)

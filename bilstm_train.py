@@ -156,7 +156,7 @@ class Train_Bilstm_Ner(object):
         self.sess = tf.Session(config=tfconfig)
         self.datahelper = Data_Helper()
         self.model = Bilstm_Att(self.datahelper)
-        self._lr = 1e-4
+        self._lr = 1e-3
         _print(self.model.y_pred.shape)
         """
         self.att_layer = text_cnn.TextCNN( \
@@ -246,7 +246,7 @@ class Train_Bilstm_Ner(object):
         # Define Training procedure
         cnn = self.att_layer
         self.att_layer.global_step = tf.Variable(0, name="global_step", trainable=False)
-        optimizer = tf.train.AdamOptimizer(1e-4)
+        optimizer = tf.train.AdamOptimizer(1e-3)
         self.att_layer.grads_and_vars = optimizer.compute_gradients(cnn.loss)
         self.att_layer.train_op = optimizer.apply_gradients(self.att_layer.grads_and_vars, global_step=self.att_layer.global_step)
         self.att_layer.optimizer = optimizer
@@ -387,12 +387,12 @@ class Bilstm_Att(object):
         #n=1
         #_acc = 0.0#_acc, _acc_average =  0.0, 0.0
         #_y_batch_lst = []
-        #_lr = 1e-4
+        #_lr = 1e-3
         #start_time = time.time()
         X_batch, y_batch = self.batch_size.__next__()
         print(X_batch.shape)
         print(y_batch.shape)
-        feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-4, self.batch_size:10, self.keep_prob:1.0}
+        feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-3, self.batch_size:10, self.keep_prob:1.0}
         #print("y_pred 预测值是:", sess.run(y_pred_meta, feed_dict=feed_dict))
         fetches = [self.y_pred_meta,self.attention,self.accuracy_bilstm, self.accuracy_attention]
         _y_pred_meta, _pred_att, _acc_bilstm, _acc_att = self.sess.run(fetches, feed_dict=feed_dict) # the cost is the mean cost of one batch
@@ -603,36 +603,22 @@ class Bilstm_Att(object):
 
 
     def fscore(self, labels, logits): # y y_
-        print(0)
         y = tf.cast(tf.reshape(labels, [-1]), tf.int32)
-        print(1)
         y_ = tf.cast(tf.argmax(logits, 1), tf.int32)
-        print(0)
         ylbEqPred = tf.cast(tf.equal(y,y_),tf.int32)
-        print(0)
         ylbEqZero = tf.cast(tf.equal(y,0),tf.int32)
-        print(2)
         ylbGthZero = tf.cast(tf.greater(y,0),tf.int32)
-        print(0)
         yPredEqZero = tf.cast(tf.equal(y_, 0),tf.int32)
-        print(0)
         yPredGthZero = tf.cast(tf.greater(y_, 0),tf.int32)
-        print(0)
         TP = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredGthZero,0*yPredGthZero),ylbGthZero, 0*yPredGthZero), tf.float32))
-        print(0)
         FP = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredGthZero,0),ylbEqZero,0*yPredGthZero), tf.float32)) 
-        print(6)
         TN = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredEqZero,0),ylbEqZero, 0*yPredEqZero), tf.float32))
-        print(0)
         FN = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredEqZero,0),ylbGthZero,0*yPredGthZero), tf.float32)) 
-        print(0)
         Precision = tf.divide(TP, tf.add(tf.add(TP,FP),0.01))
-        print(8)
         Recall= tf.divide(TP, tf.add(tf.add(TP,FN),0.01))
-        print(9)
-        Fscore = tf.multiply(tf.divide(tf.multiply(Precision, Recall), tf.add(Precision, Recall)), 10)
-        reduceFscore = tf.divide(1.0, Fscore)
-        floss = tf.multiply(10.0, reduceFscore)
+        Fscore = tf.divide(tf.multiply(Precision, Recall), tf.add(Precision, Recall))
+        squareFscore = tf.multiply(Fscore, Fscore)
+        floss= tf.divide(10000, squareFscore)
 
         return TP, FP, TN, FN, Precision, Recall, floss
     
@@ -651,6 +637,13 @@ class Bilstm_Att(object):
         #yy = tf.reshape(self.attention, [-1])
         #print(xx,yy,xx.shape,yy.shape)
         #print(xx.get_shape().ndims, yy.get_shape().ndims)
+
+    def reshape(self, inp, divide):
+        shape_all = int(inp.shape[0]) * int(inp.shape[1])
+        print(shape_all, divide)
+        assert shape_all%divide == 0
+        return tf.reshape(inp, (shape_all//divide, divide))
+
     def init_attention(self, X_inputs, y_pred, vocab_size, btsize, timestep_size, embedding_size, class_num):
             #with tf.variable_scope('attentions'):
             #pdb.set_trace(
@@ -660,20 +653,31 @@ class Bilstm_Att(object):
             embedding = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0))
             att_inputs = tf.cast(tf.reshape(tf.nn.embedding_lookup(embedding, X_inputs), [btsize, timestep_size*embedding_size]), tf.float32)
 
-            inputs = tf.nn.embedding_lookup(embedding, X_inputs)
+            #inputs = tf.nn.embedding_lookup(embedding, X_inputs)
             tvm = timestep_size*embedding_size # 200 * 256
             tnm = timestep_size*class_num      # 200 * 3
-            # ====== 对每个句子进行全连接运算DNN
-            mid = self.init_full_conn_layer(att_inputs,tvm, tvm*2,tf.float32)
+            divide = 10*embedding_size
+            ## ====== 对每个句子进行全连接运算DNN
+            #mid = self.init_full_conn_layer(att_inputs,tvm, tvm*2,tf.float32)
+            
+            # ====== cut sent to 10 words matrix
+            att_inputs_div_ten = self.reshape(att_inputs, divide)
+
+            # ====== dnn for every 10 words 
+            mid = self.init_full_conn_layer(att_inputs_div_ten, divide, divide,tf.float32)
 
             # ====== 将维度缩小输出
-            dnn_output = self.init_full_conn_layer(mid,tvm*2, tnm,tf.float32)
+            dnn_output_divide = self.reshape(mid, tvm)
+            dnn_output= self.init_full_conn_layer(dnn_output_divide, tvm, tnm, tf.float32)
             # dnn_output.shape == self.btsize, tnm
 
             # ====== 将维度缩小输出 对前面的y_pred使用DNN处理
-            y_pred_trans = tf.reshape(y_pred,[btsize, tnm])
+            #y_pred_trans = tf.reshape(y_pred,[btsize, tnm])
+            divideClassNum = 10*class_num
+            y_pred_trans = self.reshape(y_pred, divideClassNum)
+            ## ====== 对每个句子进行全连接运算DNN
             #y_pred_dnn = self.init_full_conn_layer(y_pred_trans,tnm,tnm,tf.float32)
-            rnn_output = self.init_full_conn_layer(y_pred_trans,tnm,tnm,tf.float32)
+            rnn_output = self.init_full_conn_layer(y_pred_trans,divideClassNum, divideClassNum ,tf.float32)
             # ====== 将rnn dnn 输出结果合并
             sents_cnt = btsize # 32 sent 有多少个句子
             sent_size = timestep_size*class_num # 200 words 3 predict 有多少个 词*词维度 
@@ -681,21 +685,19 @@ class Bilstm_Att(object):
             d = tf.reshape(dnn_output,[sents_cnt,sent_size])
 
             rd_tensor = tf.concat((r,d),1)#10,1200
-            #tf.reshape(rd_tensor,[sents_cnt, sent_size*2]
-            #print(rd_tensor)
-            rdl = sent_size#rd_tensor.shape[0]
-            #print(rdl)
+            double_sent_size = 2*sent_size#rd_tensor.shape[0]
 
             # ====== 将合并后的dnn再输出
-            rnn_part = self.init_multi_layer(r,1,rdl,tf.float32)
-            dnn_part = self.init_multi_layer(d,1,rdl,tf.float32)
-            #att_sum_out = self.init_full_conn_layer(att_sum,2*rdl,rdl//2,tf.float32)
-            att_out= tf.add(rnn_part,dnn_part)
-            self.attention = tf.reshape(att_out, (btsize*timestep_size, class_num))
+            #rnn_part = self.init_multi_layer(r,1,rdl,tf.float32)
+            #dnn_part = self.init_multi_layer(d,1,rdl,tf.float32)
+            att_sum = self.init_full_conn_layer(rd_tensor,2*sent_size,4*sent_size,tf.float32)
+            att_sum_out = self.init_full_conn_layer(att_sum,4*sent_size,sent_size,tf.float32)
+            #att_out= tf.add(rnn_part,dnn_part)
+            self.attention = tf.reshape(att_sum_out, (btsize*timestep_size, class_num))
             self.TP, self.FP, self.TN, self.FN ,self.Precision, self.Recall,self.Fscore = self.fscore(labels=self.y_inputs, logits=self.attention)
 
             self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
-            self.cost = tf.add(self.Fscore, self.loss)
+            self.cost = tf.add(self.Fscore, tf.multiply(0.01, self.loss))
 
             correct_prediction = tf.equal(tf.cast(tf.argmax(self.attention, 1), tf.int32), tf.reshape(self.y_inputs, [-1]))
             self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -720,7 +722,7 @@ class Bilstm_Att(object):
             #ed = -1 - stry[::-1].find('2')
 
     def init_placeholder(self):
-        self._lr=1e-4
+        self._lr=1e-3
         self.X_inputs = tf.placeholder(tf.int32, [self.btsize, self.timestep_size], name='X_input')
         self.y_inputs = tf.placeholder(tf.int32, [self.btsize, self.timestep_size], name='y_input')
         self.lr = tf.placeholder(tf.float32, [])
@@ -833,9 +835,15 @@ class Bilstm_Att(object):
         tf.add_to_collection('model.X_inputs',self.X_inputs)
         tf.add_to_collection('model.y_inputs',self.y_inputs)
         tf.add_to_collection('batch_size',self.batch_size)
-        tf.add_to_collection('lr',self._lr)
+        tf.add_to_collection('lr',self.lr)
         tf.add_to_collection('keep_prob',self.keep_prob)
-        tf.add_to_collection('attention',self.attention)
+        tf.add_to_collection('TP',self.TP)
+        tf.add_to_collection('FP',self.FP)
+        tf.add_to_collection('TN',self.TN)
+        tf.add_to_collection('FN',self.FN)
+        tf.add_to_collection('Precision',self.Precision)
+        tf.add_to_collection('Recall',self.Recall)
+        tf.add_to_collection('Fscore',self.Fscore)
 
     def prtvar(self, var):
         try:
