@@ -5,6 +5,7 @@ import sys
 sys.path.append("/home/distdev/src/iba/dmp/gongan")
 from bilstm import addr_classify
 #from bilstm import eval_bilstm
+import pdb
 #import arctic
 import os
 import pdb
@@ -771,6 +772,7 @@ class Data_Helper(object):
                     pdb.set_trace()
                 global SAMPLE_CNT
                 SAMPLE_CNT.add(c)
+                pdb.set_trace()
                 _print("\n> there r ", len(SAMPLE_CNT), 'correct sample total here')
                 yield _ids,_tags
 
