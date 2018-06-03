@@ -687,7 +687,7 @@ class Data_Helper(object):
                     print(Const.KEYLOSS)
                     continue
                 #===== 过滤掉字数太少的文本 和　无中文 的文本
-                pdb.set_trace()
+                pass#pdb.set_trace()
                 _crim=self.dwc(item[targetcol])
                 _text=self.dwc(item[textcol])
                 pass#pdb.set_trace()
@@ -857,7 +857,7 @@ class Data_Helper(object):
             _print("next_batch round_cnt", round_cnt)
             try:
                 import pdb
-                pdb.set_trace()
+                pass#pdb.set_trace()
                 a,b = _gen.__next__()
                 _print("\n> a,b the _gen.next() batch")
                 _print(a,b)
@@ -871,12 +871,12 @@ class Data_Helper(object):
                     if Const.DEBUG=="True":
                         import pdb
                         print("next_batch")
-                        pdb.set_trace()
-                    pdb.set_trace()
+                        pass#pdb.set_trace()
+                    pass#pdb.set_trace()
                     yield np.array(_ids).reshape(self.btsize,200), np.array(_tags).reshape(self.btsize,200)
                     _ids,_tags = [],[]
             except StopIteration:
-                pdb.set_trace()
+                pass#pdb.set_trace()
                 traceback.print_exc()
                 #round_cnt=0
                 _gen = self.gen_train_data("train")

@@ -20,7 +20,7 @@ echo $trorev
 if [ $trorev -eq 5 ]
   then 
     #echo $trorev
-    nohup python /home/distdev/bilstm/bilstm_train.py > tmp 2>&1 &
+    python /home/distdev/bilstm/bilstm_train.py >tmp 2>2 1>1
     echo "nohup python bilstm_train.py > tmp 2>&1 &"
 elif [ $trorev -eq 2 ]
   then

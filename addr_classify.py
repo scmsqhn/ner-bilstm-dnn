@@ -19,9 +19,20 @@ import re
 import numpy as np
 from sklearn.manifold import TSNE
 import sys
-sys.path.append("/home/siyuan/algor/src/iba")
-import dmp.gongan.ssc_dl_ner.data_utils
-import dmp.gongan.gz_case_address.predict
+import os
+CURPATH = os.path.dirname(os.path.realpath(__file__))
+#import sys
+PARPATH = os.path.dirname(CURPATH)
+sys.path.append(PARPATH)
+sys.path.append(CURPATH)
+sys.path.append("/home/distdev")
+print(CURPATH, PARPATH)
+import dmp
+sys.path.append("home/distdev/dmp/gongan")
+#import gz_case_address
+#import predict 
+import dmp.gongan.ssc_dl_ner.data_utils as data_utils
+#import dmp.gongan.gz_case_address.predict
 import pymongo
 import traceback
 import pdb
@@ -258,6 +269,7 @@ class Addr_Classify(object):
         crimin_lst = Addr_Classify.keyword_reg(self.crimin_lst, sent)
         return livein_lst, regisin_lst, crimin_lst
 
+    """
     def ext_with_ner_predict(self, lin):
         #print("ext_with_ner_predict")
         #print(lin)
@@ -271,6 +283,7 @@ class Addr_Classify(object):
         except KeyError:
             traceback.print_exc()
         return words
+    """
 
     def ext_with_posseg_reg(self,sent):
         chunk = self.doc.cut_word_vpn_pvn_chunk(sent)

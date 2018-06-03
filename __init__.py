@@ -1,5 +1,3 @@
+#!coding=utf8
 import sys
-sys.path.append("/home/siyuan/extcode")
-print(sys.path)
 
-#

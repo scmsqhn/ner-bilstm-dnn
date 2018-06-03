@@ -28,6 +28,7 @@ PARPATH = os.path.dirname(CURPATH)
 print(CURPATH)
 sys.path.append(PARPATH)
 sys.path.append(CURPATH)
+sys.path.append("/home/distdev")
 #from bilstm import addr_classify
 #from bilstm import eval_bilstm
 import bilstm

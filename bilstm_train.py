@@ -32,13 +32,15 @@ from tensorflow.contrib import rnn
 #import dmp.gongan.gz_case_address.predict as address_predict
 #sys.path.append("/home/distdev/addr_classify")
 CURPATH = os.path.dirname(os.path.realpath(__file__))
-print(CURPATH)
 #import sys
 PARPATH = os.path.dirname(CURPATH)
 sys.path.append(PARPATH)
 sys.path.append(CURPATH)
+print(CURPATH)
+print(PARPATH)
 #from bilstm import addr_classify
 #from bilstm import eval_bilstm
+sys.path.append("/home/distdev")
 import bilstm
 from bilstm import datahelper
 from bilstm.datahelper import Data_Helper
@@ -617,8 +619,10 @@ class Bilstm_Att(object):
         Recall= tf.divide(TP, tf.add(tf.add(TP,FN),0.01))
         Fscore = tf.divide(tf.multiply(Precision, Recall), tf.add(Precision, Recall))
         squareFscore = tf.multiply(Fscore, Fscore)
-        floss= tf.divide(10000, squareFscore)
-
+        threeMulFscore = tf.multiply(squareFscore, Fscore)
+        #fourMulFscore = tf.multiply(threeMulFscore, Fscore) # if u wanna fscore more effection modify here
+        """ this to make the fscore more important before close enought to zero """
+        floss= tf.divide(1, threeMulFscore)
         return TP, FP, TN, FN, Precision, Recall, floss
     
     def init_model_struct(self):
@@ -696,7 +700,7 @@ class Bilstm_Att(object):
             self.TP, self.FP, self.TN, self.FN ,self.Precision, self.Recall,self.Fscore = self.fscore(labels=self.y_inputs, logits=self.attention)
 
             self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
-            self.cost = tf.add(self.Fscore, tf.multiply(0.01, self.loss))
+            self.cost = tf.multiply(self.Fscore, self.loss)
 
             correct_prediction = tf.equal(tf.cast(tf.argmax(self.attention, 1), tf.int32), tf.reshape(self.y_inputs, [-1]))
             self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -836,6 +840,7 @@ class Bilstm_Att(object):
         tf.add_to_collection('batch_size',self.batch_size)
         tf.add_to_collection('lr',self.lr)
         tf.add_to_collection('keep_prob',self.keep_prob)
+        tf.add_to_collection('attention',self.attention)
         tf.add_to_collection('TP',self.TP)
         tf.add_to_collection('FP',self.FP)
         tf.add_to_collection('TN',self.TN)
@@ -927,6 +932,7 @@ class Bilstm_Att(object):
                 show_costs += res_cost
                 #_print("show_accs, show_costs, _accs, _costs")
                 print("acc cost average")
+                self.prtAllPara()
                 if batch%100==1:
                    X_batch, y_batch = self.batch_gen.__next__()
                    feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:self._lr, self.batch_size:self.btsize, self.keep_prob:0.5}
@@ -934,7 +940,6 @@ class Bilstm_Att(object):
                    res_mean_cost = show_costs/100
                    self.insertParaDict("res_mean_acc", res_mean_acc)
                    self.insertParaDict("res_mean_cost", res_mean_cost)
-                   self.prtAllPara()
                    #if mean_cost-self.basecost>0:
                    #    _print("\n> TRIGGER THE NEW _LR SETTING")
                    #    tvars=tf.trainable_variables()  # 获取模型的所有参数
@@ -989,9 +994,9 @@ class Bilstm_Att(object):
 if __name__ == "__main__":
     _print("\n train.py")
     train_bilstm_ner_ins =  Train_Bilstm_Ner()
-    while(1):
-        print(train_bilstm_ner_ins.model.batch_gen.__next__())
-        pdb.set_trace()
+    #while(1):
+    #    print(train_bilstm_ner_ins.model.batch_gen.__next__())
+    #    pass#pdb.set_trace()
     #train_bilstm_ner_ins.att_train()
     #train_bilstm_ner_ins.test_train_step_att()
     #df = train_bilstm_ner_ins.get_arctic_df("dataframe", "gz_gongan_case_posseg_cut")
