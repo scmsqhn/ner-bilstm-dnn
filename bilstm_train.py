@@ -989,6 +989,9 @@ class Bilstm_Att(object):
 if __name__ == "__main__":
     _print("\n train.py")
     train_bilstm_ner_ins =  Train_Bilstm_Ner()
+    while(1):
+        print(train_bilstm_ner_ins.model.batch_gen.__next__())
+        pdb.set_trace()
     #train_bilstm_ner_ins.att_train()
     #train_bilstm_ner_ins.test_train_step_att()
     #df = train_bilstm_ner_ins.get_arctic_df("dataframe", "gz_gongan_case_posseg_cut")

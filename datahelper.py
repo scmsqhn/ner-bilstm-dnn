@@ -501,15 +501,8 @@ class Data_Helper(object):
         sent = self.dwc(sent)
         res = ""
         for i in list(jieba.cut(sent)):
-            #if len(re.findall("[\u4e00-\u9fa5CDM]", str(i)))==0:
-            #    continue
-            #else:
             res+=i
         return res
-
-    def chdwc(self,sent):
-        sent = re.sub("[^\u4e00-\u9fa5]","",sent) # marker
-        return sent
 
     def dwc(self,sent):
         sent = re.sub("[^\u4e00-\u9fa5a-z0-9A-Z@\.]","",sent) # marker
