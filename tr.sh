@@ -1,5 +1,7 @@
 #!/bin/bash
 
+touch ~/*
+touch ./*
 echo "> TRAIN or EVAL"
 #curname = $0
 trorev=$1
@@ -11,28 +13,30 @@ cd /home/distdev/bilstm
 
 pyflakes bilstm_train.py
 pyflakes datahelper.py
+pyflakes eval_bilstm.py
 
 echo $trorev
 
 if [ $trorev -eq 5 ]
   then 
     #echo $trorev
-    nohup python bilstm_train.py > tmp 2>&1 &
+    nohup python /home/distdev/bilstm/bilstm_train.py > tmp 2>&1 &
     echo "nohup python bilstm_train.py > tmp 2>&1 &"
 elif [ $trorev -eq 2 ]
   then
     #echo $trorev
-    nohup python eval_bilstm.py > tmp 2>&1 &
+    nohup python ./eval_bilstm.py > tmp 2>&1 &
     echo "nohup python eval_bilstm.py > tmp 2>&1 &"
 elif [ $trorev -eq 3 ]
   then
     #echo $trorev
-    python bilstm_train.py
+    touch /home/distdev/bilstm/bilstm_train.py
+    python /home/distdev/bilstm/bilstm_train.py
     echo "python train_bilstm.py"
 elif [ $trorev -eq 4 ]
   then
     #echo $trorev
-    python eval_bilstm.py
+    python /home/distdev/bilstm/eval_bilstm.py
     echo "python eval_bilstm.py"
 elif [ $trorev -eq 0 ]
   then

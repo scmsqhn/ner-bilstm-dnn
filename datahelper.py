@@ -9,6 +9,7 @@ import pdb
 #import arctic
 import os
 import pdb
+import pdb
 #import pdb
 import gensim
 import traceback
@@ -259,7 +260,7 @@ class Data_Helper(object):
                     output.extend([0.0]*8)
                 else:
                     output.extend(data[j,:])
-        #pdb.set_trace()
+        pass#pdb.set_trace()
         #print(np.array(output).reshape(1000,9*(n-1)))
         return np.array(output).reshape(1000,9*(n-1))
 
@@ -409,12 +410,12 @@ class Data_Helper(object):
                 try:
                     mark_sent = re.sub(mark_target_sent, mark_target, mark_sent)
                 except:
-                    #pdb.set_trace()
+                    pass#pdb.set_trace()
                     pass
                 mark_sent = re.sub(mark_target_sent, mark_target, mark_sent)
             #_print("\n> mark_sent")
             #_print(mark_sent)
-            #pdb.set_trace()
+            pass#pdb.set_trace()
             #_print(re.findall("(.+?)/(.+?) ", mark_sent))
             #mark_sent_lst = mark_sent.split("\n")
             ids_lst, tags_lst = [], []
@@ -440,7 +441,7 @@ class Data_Helper(object):
 
     def split(self, lst, text):
         import pdb
-        #pdb.set_trace()
+        pass#pdb.set_trace()
         result = ""
         target = []
 
@@ -486,45 +487,13 @@ class Data_Helper(object):
         print("lst",lst)
         print("target",target)
         import pdb
-        #pdb.set_trace()
+        pass#pdb.set_trace()
         return result
 
 
     def clr_2_lst(self,sent):
         print(sent)
         res = [self.dwc(i) for i in list(jieba.cut(sent))]
-        return res
-
-    def faked_clr_2_lst(self,sent):
-        print(sent)
-        i = sent
-        pass
-        res = []
-        fd = re.findall("[DC]+",str(i))
-        sp = re.split("[DC]+",str(i))
-        assert len(sp)==len(fd)+1
-        for i in range(len(fd)):
-            res.extend(jieba.cut(sp[i]))
-            res.extend(jieba.cut(fd[i]))
-        res.extend(jieba.cut(sp[-1]))
-        print(res)
-        return res
-
-    def fake_clr_2_lst(self,sent):
-        print(sent)
-        pass
-        res = []
-        for i in list(jieba.cut(sent)):
-            if len(re.findall("[DC]", str(i)))>0:
-                #pdb.set_trace()
-                for j in list(re.split("[DC]",i)):
-                    res.append(j)
-                    #pdb.set_trace()
-                #    print("give up",i)
-                #    continue
-            else:
-                res.append(i)
-        print("res",res)
         return res
 
     def clr_2_str(self,sent):
@@ -544,14 +513,14 @@ class Data_Helper(object):
 
     def dwc(self,sent):
         sent = re.sub("[^\u4e00-\u9fa5a-z0-9A-Z@\.]","",sent) # marker
-        #sent = re.sub("[a-zA-Z]","C",sent) # char
-        #sent = re.sub("[0-9]","3",sent) # num
         return sent
-    def gen_train_data(self, name="eval"):
+
+    def gen_train_data(self, name="train"):
       g = ""
       if name == "train":
           g = self.gen_train()
       else:
+          pass#pdb.set_trace()
           g = self.gen_eval()
       return g
 
@@ -687,7 +656,7 @@ class Data_Helper(object):
                     if Const.DEBUG=="True":
                         _print("gen_eval data _ids _tags")
                         _print("_ids,_tags",_ids,_tags)
-                        pdb.set_trace()
+                        pass#pdb.set_trace()
                     yield _ids,_tags,_words
                     #_ids,_tags,_words = [],[],[]
                 #if len(_tags)%(self.btsize*200)==0 and len(_tags)>2:
@@ -695,6 +664,8 @@ class Data_Helper(object):
 
     def gen_train(self, begin_cursor=100,db='myDB',coll='traindata',textcol='text',targetcol='addrcrim',funcname='gen_train'):
             _print("\n> gen_train_data new a Eval_Ner()")
+            import  pdb
+            pass#pdb.set_trace()
             self.get_mongo_coll(db,coll)
             _collections=self.mongo_col
             count=_collections.count()-begin_cursor
@@ -713,7 +684,7 @@ class Data_Helper(object):
                 #===== 过滤掉字段不全的文本
                 item=_cursor[c]
                 import pdb
-                #pdb.set_trace()
+                pass#pdb.set_trace()
                 try:
                   if self._vali_in(targetcol,item,'gen_train') == Const.ERROR or \
                       self._vali_in(textcol,item,'gen_train') == Const.ERROR:
@@ -725,7 +696,7 @@ class Data_Helper(object):
                 #===== 过滤掉字数太少的文本 和　无中文 的文本
                 _crim=self.dwc(item[targetcol])
                 _text=self.dwc(item[textcol])
-                #pdb.set_trace()
+                pass#pdb.set_trace()
                 if len(re.findall("[\u4e00-\u9fa5]{2,}",str(_crim)))<1 or len(_text)<3:
                     print("\n> filter text uselessness")
                     print(Const.TEXTUSELESS)
@@ -749,7 +720,7 @@ class Data_Helper(object):
                     print(Const.TARGETUSELESS)
                     continue
                 #=====　文本transform to str and list
-                pdb.set_trace()
+                pass#pdb.set_trace()
                 txt = self.clr_2_str(_text)
                 lsttxt = self.clr_2_lst(_text)
                 result = self.split(_crim_res, _text)
@@ -769,10 +740,10 @@ class Data_Helper(object):
                 if Const.DEBUG=="True":
                     _print("gen_train data _ids _tags")
                     _print("_ids,_tags",_ids,_tags)
-                    pdb.set_trace()
+                    pass#pdb.set_trace()
                 global SAMPLE_CNT
                 SAMPLE_CNT.add(c)
-                pdb.set_trace()
+                pass#pdb.set_trace()
                 _print("\n> there r ", len(SAMPLE_CNT), 'correct sample total here')
                 yield _ids,_tags
 
@@ -839,7 +810,7 @@ class Data_Helper(object):
 
     def toArr(self,lst,x,y):
         #import pdb
-        #pdb.set_trace()
+        pass#pdb.set_trace()
         self._vali_date_lenth(lst,x*y,"toArr()")
         return np.array(lst).reshape(x,y)
  
@@ -863,7 +834,7 @@ class Data_Helper(object):
                 _ids,_tags,_words,_lbs=[],[],[],[]
                 i=0
             #import pdb
-            #pdb.set_trace()
+            pass#pdb.set_trace()
 
     def next_batch_eval(self,gen):
         i=0
@@ -879,11 +850,11 @@ class Data_Helper(object):
                 yield self.toArr(_ids,self.btsize,200), self.toArr(_tags,self.btsize,200), self.toArr(_words,self.btsize,200)
                 if Const.DEBUG=="True":
                     print("next_batch_eval")
-                    pdb.set_trace()
+                    pass#pdb.set_trace()
                 _ids,_tags,_words=[],[],[]
                 i=0
             #import pdb
-            #pdb.set_trace()
+            pass#pdb.set_trace()
 
     def next_batch(self, _gen):
         round_cnt = 0
@@ -891,9 +862,11 @@ class Data_Helper(object):
         while(1):
             _print("next_batch round_cnt", round_cnt)
             try:
+                import pdb
+                pdb.set_trace()
                 a,b = _gen.__next__()
                 _print("\n> a,b the _gen.next() batch")
-                #_print(a,b)
+                _print(a,b)
                 #_gen = self.gen_train_data(per=0.8, name=flag)
                 assert len(a) == len(b)
                 _ids.append(a)
@@ -905,11 +878,11 @@ class Data_Helper(object):
                         import pdb
                         print("next_batch")
                         pdb.set_trace()
-                    #pdb.set_trace()
+                    pdb.set_trace()
                     yield np.array(_ids).reshape(self.btsize,200), np.array(_tags).reshape(self.btsize,200)
                     _ids,_tags = [],[]
             except StopIteration:
-                # pdb.set_trace()
+                pdb.set_trace()
                 traceback.print_exc()
                 #round_cnt=0
                 _gen = self.gen_train_data("train")
@@ -928,10 +901,10 @@ class Data_Helper(object):
                 collection.update_one({"_id":i["_id"]},{"$set":{k1:l1}})
                 collection.update_one({"_id":i["_id"]},{"$set":{k2:l2}})
                 if len(str(i[k1]))>6:
-                    #pdb.set_trace()
+                    pass#pdb.set_trace()
                     print(">l1: ",l1)
                 if len(str(i[k2]))>6:
-                    #pdb.set_trace()
+                    pass#pdb.set_trace()
                     print(">l2: ", l2)
                 items = []
                 items.extend(l1)
@@ -962,12 +935,12 @@ class Data_Helper(object):
                 if items == None:
                     items = []
                 if len(items)>0:
-                    pass#pdb.set_trace()
+                    passpdb.set_trace()
                 items_copy = items.copy()
                 items_copy2 = items.copy()
                 print("\n> items_copy", items_copy)
                 print("\n> items_copy2", items_copy2)
-                #pdb.set_trace()
+                pass#pdb.set_trace()
                 for itema in items_copy2:
                     for itemb in items_copy2:
                         if itema == itemb:
@@ -978,9 +951,9 @@ class Data_Helper(object):
                 items_copy = list(set(items_copy))
                 print("\n> items_copy", items_copy)
                 if len(items_copy2)>0:# and len(items_copy)==0:
-                   pass# #pdb.set_trace()
+                   pass#pdb.set_trace()
                 if len(items_copy)>0:# and len(items_copy)==0:
-                   pass# #pdb.set_trace()
+                   pass#pdb.set_trace()
                 collection.update_one({"_id":i["_id"]},{"$set":{k2:items_copy}})
 
     def replace_kws(self, db, col, key, val1,val2):
@@ -1030,6 +1003,7 @@ def clr_addrcrim_sum():
         print(i['addrcrim_sum'])
 
 if __name__ == "__main__":
+    import pdb
     n=310
     dh=Data_Helper()
     train_gen=dh.gen_train_data("train")
@@ -1039,7 +1013,7 @@ if __name__ == "__main__":
     while(n>0):
         a,b = t.__next__()
         c,d,w = e.__next__()
-        pdb.set_trace()
+        pass#pdb.set_trace()
         n-=1
     #a,b=dh.next_batch(gen)
     #clr_addrcrim_sum()

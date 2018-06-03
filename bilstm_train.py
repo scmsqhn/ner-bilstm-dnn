@@ -302,7 +302,6 @@ class Bilstm_Att(object):
         self.save_graph_meta()
 
 
-
     def init_ckpt(self):
         ckpt = tf.train.get_checkpoint_state('./model/')
         self.model_path = ckpt.model_checkpoint_path #_path("model/bilstm.ckpt-7")
@@ -565,7 +564,7 @@ class Bilstm_Att(object):
             for timestep in range(self.timestep_size):
                 #if timestep > 0:
                     #tf.get_variable_scope().reuse_variables()
-                # pdb.set_trace()
+                # pass#pdb.set_trace()
                 (output_fw, state_fw) = cell_fw(float_inputs[:, timestep, :], state_fw)
                 outputs_fw.append(output_fw)
             outputs_bw = []
@@ -772,7 +771,7 @@ class Bilstm_Att(object):
         #tmp_y_ = tf.reshape(tf.cast(tf.one_hot(tf.argmax(self.attention,1),3), tf.int32),[-1])
         #self.cost = tf.reduce_mean(tf.equal(tmp_y,tmp_y_))
 
-        # pdb.set_trace()
+        # pass#pdb.set_trace()
 
         # 梯度下降计算
         #self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = tf.cast(tf.reshape(tf.argmax(self.y_pred,1), [-1]), dtype=tf.float32)))
@@ -861,7 +860,7 @@ class Bilstm_Att(object):
                 return var
         except:
            traceback.print_exc()
-           pdb.set_trace()
+           pass#pdb.set_trace()
            _print("Sorry, there is no var named %s"% var)
            return var
 
@@ -895,10 +894,12 @@ class Bilstm_Att(object):
             #start_time = time.time()
             _costs, _accs, show_accs, show_costs  = 0.0, 0.0, 0.0, 0.0
             #_costs, _accs = 0.0, 0.0
+            pass#pdb.set_trace()
             for batch in range(self.tf_batch_num):
                 _print('EPOCH %d lr=%g' % (epoch+1, self._lr))
                 _acc = 0.0
                 X_batch, y_batch = self.batch_gen.__next__()
+                pass#pdb.set_trace()
                 feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:self._lr, self.batch_size:self.btsize, self.keep_prob:0.5}
                 res_att, res_acc, res_cost, res_op, res_precision, res_recall, res_fscore, res_tp, res_fp,res_tn,res_fn \
                     = sess.run(train_fetches, feed_dict) # the self.cost is the mean self.cost of one batch
@@ -926,11 +927,11 @@ class Bilstm_Att(object):
                 show_costs += res_cost
                 #_print("show_accs, show_costs, _accs, _costs")
                 print("acc cost average")
-                if batch%3==1:
+                if batch%100==1:
                    X_batch, y_batch = self.batch_gen.__next__()
                    feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:self._lr, self.batch_size:self.btsize, self.keep_prob:0.5}
-                   res_mean_acc = show_accs/3
-                   res_mean_cost = show_costs/3
+                   res_mean_acc = show_accs/100
+                   res_mean_cost = show_costs/100
                    self.insertParaDict("res_mean_acc", res_mean_acc)
                    self.insertParaDict("res_mean_cost", res_mean_cost)
                    self.prtAllPara()
@@ -1002,6 +1003,5 @@ if __name__ == "__main__":
     #for i in range(2):
     #    _print("\n predict 1 sentence")
     #    train_bilstm_ner_ins.model.run()
-    """ ["<_RefVariableProcessor(<tf.Variable 'embedding:0' shape=(1000000, 128) dtype=int32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'multi_rnn_cell/cell_0/lstm_cell/kernel:0' shape=(384, 1024) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'multi_rnn_cell/cell_0/lstm_cell/bias:0' shape=(1024,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'multi_rnn_cell/cell_1/lstm_cell/kernel:0' shape=(512, 1024) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'multi_rnn_cell/cell_1/lstm_cell/bias:0' shape=(1024,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'multi_rnn_cell/cell_2/lstm_cell/kernel:0' shape=(512, 1024) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'multi_rnn_cell/cell_2/lstm_cell/bias:0' shape=(1024,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'multi_rnn_cell/cell_3/lstm_cell/kernel:0' shape=(512, 1024) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'multi_rnn_cell/cell_3/lstm_cell/bias:0' shape=(1024,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable:0' shape=(512, 3) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_1:0' shape=(3,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_2:0' shape=(25600, 51200) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_3:0' shape=(51200,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_4:0' shape=(51200, 600) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_5:0' shape=(600,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_6:0' shape=(600, 600) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_7:0' shape=(600,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_8:0' shape=(1, 600) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_9:0' shape=(600,) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_10:0' shape=(1, 600) dtype=float32_ref>)>", "<_RefVariableProcessor(<tf.Variable 'Variable_11:0' shape=(600,) dtype=float32_ref>)>"]"""
 
 
