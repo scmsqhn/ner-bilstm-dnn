@@ -687,6 +687,7 @@ class Data_Helper(object):
                     print(Const.KEYLOSS)
                     continue
                 #===== 过滤掉字数太少的文本 和　无中文 的文本
+                pdb.set_trace()
                 _crim=self.dwc(item[targetcol])
                 _text=self.dwc(item[textcol])
                 pass#pdb.set_trace()

@@ -11,7 +11,7 @@ if [ $trorev -eq 0 ] # file into debug mode
     sed 's/^[[:space:]]*//g'  bilstm_train.py eval_bilstm.py datahelper.py
 
     sed -i "s/DEBUG = False/DEBUG = True/g" bilstm_train.py eval_bilstm.py datahelper.py
-elif [ $trorev -eq 2 ]
+elif [ $trorev -eq 1 ]
   then
     #echo $trorev
     echo "nohup python eval_bilstm.py > tmp 2>&1 &"
