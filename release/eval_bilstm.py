@@ -1,13 +1,11 @@
 import sys
 import gensim
-import pdb
 import pymongo
 import traceback
 from dmp.gongan.ssc_dl_ner.data_utils import full_to_half
 import numpy as np
 import pandas as pd
 import logging
-import pdb
 import re
 import pdb
 import time
@@ -120,7 +118,7 @@ class Eval_Ner(object):
         self.sess.run(tf.global_variables_initializer())
         ckpt = tf.train.get_checkpoint_state(CURPATH)
         saver = tf.train.import_meta_graph(_path('bilstm.ckpt-1.meta'))
-        #saver.restore(self.sess, ckpt.model_checkpoint_path)
+        saver.restore(self.sess, _path('bilstm.ckpt-1'))
         self.X_inputs=tf.get_collection("model.X_inputs")[0]
         self.y_inputs=tf.get_collection("model.y_inputs")[0]
         self.y_pred_meta=tf.get_collection("attention")[0]
@@ -198,46 +196,69 @@ class Eval_Ner(object):
             lenSub = num - len(ids)
             ids.extend([self.data_helper.fromdct(" ", flag=False) for i in range(lenSub)])
             tags.extend([0 for i in range(lenSub)])
+            # pdb.set_trace()
             return ids[:num], tags[:num]
         else:
             return ids[:num], tags[:num]
 
     def sent2BatchUnit(self,  sents, num=32):
         xbatch,ybatch = [],[]
+        cnt=0
         for sent in sents:
+            cnt+=1
             wordsTwoHundred, tagsTwohundred= self.sent2WordsUnit(sent)    
             xbatch.append(wordsTwoHundred)
             ybatch.append(tagsTwohundred)
-            if len(xbatch) == num:
+            if cnt%num == 0:
                 yield xbatch, ybatch
                 xbatch, ybatch = [],[]
-        if len(xbatch)>0:
-            for i in range(num-len(xbatch)):
-                p,q = self.sent2WordsUnit("")
+        if cnt%32>0:
+            for i in range(num-cnt%32):
+                p,q = self.sent2WordsUnit(" ")
                 xbatch.append(p)
                 ybatch.append(q)
             yield xbatch, ybatch
+
+    def clrSet(self, setItem):
+        if "" in setItem:
+            setItem.remove("")
+        return list(setItem)
 
 
     def predict_txt(self, text):
         res = []
         gen = self.sent2BatchUnit(text,32)
         while(1):
-            X_in, y_in = gen.__next__()
-            X_batch, y_batch = np.array(X_in), np.array(y_in)
-            feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.batch_size:32, self.lr:1e-3, self.keep_prob:1.0}
+            X_in, y_in = -1,-1
+            try:
+                X_in, y_in = gen.__next__()
+            except StopIteration:
+                print("> data feed over")
+                break
+            X_batch, y_batch = np.array(X_in).reshape(32,200), np.array(y_in).reshape(32,200)
+            feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.batch_size:32, self.keep_prob:1.0}
+            print("x",X_batch)
+            print("y",y_batch)
             fetches = [self.y_pred_meta]
             [yPredMeta] = self.sess.run(fetches, feed_dict=feed_dict) # the cost is the mean cost of one batch
             y_=np.argmax(yPredMeta.reshape(6400,3),1).reshape(32,200)
-            wordsStr = ""
             for i,j in zip(X_in, y_):
+                wordsStr = ""
+                assert len(i) == len(j)
+                assert len(i) == 200
                 for m,n in zip(i,j):
-                    wordsStr+="%s/%s "%(i,self.rev_tags[j])
-                pickTuple = re.findall(".+?/o (.+?) .+?/o ")
-                keyWordsInOne = []
+                    #print(m,n)
+                    #print(m,self.rev_tags[n])
+                    wordsStr+="%s/%s "%(self.data_helper.dct.get(m), self.rev_tags[n])
+                print(wordsStr)
+                #pickTuple = re.split(".+?/[bi] ", wordsStr)
+                pickTuple=re.split("[\u4e00-\u9fa5a-zA-Z0-9@\.]*/o",wordsStr)
+                print(pickTuple)
+                addrSet = set()
                 for i in pickTuple:
-                    keyWordsInOne.append(i)
-                res.append(keyWordsInOne)
+                    ret = "".join(re.findall("([\u4e00-\u9fa5a-zA-Z0-9@\.]*)/[ib]",i))
+                    addrSet.add(ret)
+                res.append(self.clrSet(addrSet))
         return res
 
     def run_sent(self, sent):
@@ -271,7 +292,7 @@ class Eval_Ner(object):
             return allwords, basewords, predwords
 
     def run(self):
-        result, _, _= self.predict()
+        result, _, _= self.predict(sent) 
         for sent in result:
             _char_lst, _tags_pred_lst, _y_batch_lst = sent[0], sent[1], sent[2]
             _print(_char_lst, _tags_pred_lst, _y_batch_lst)
@@ -371,7 +392,7 @@ if __name__ == "__main__":
     sents = []
     eval_ins = Eval_Ner()
     #coll = pymongo.MongoClient("mongodb://127.0.0.1:27017")['myDB']['ner_addr_crim_sample']
-    
-    eval_ins.predict_txt(eval_ins.readDoc("gz_jyaq.txt"))
+    result = eval_ins.predict_txt(eval_ins.readDoc("gz_jyaq.txt"))
+    print(result)
 
 
