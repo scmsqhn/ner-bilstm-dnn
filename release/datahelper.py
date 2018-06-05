@@ -2,36 +2,17 @@
 import pymongo
 import logging
 import sys
-from bilstm import addr_classify
-#from bilstm import eval_bilstm
+#import addr_classify
 import pdb
-#import arctic
 import os
 import pdb
-import pdb
-#import pdb
 import gensim
 import traceback
-#import digital_info_extract as dex
 import numpy as np
-#import pandas as pd
-#import matplotlib.pyplot as plt
 import re
-#from tqdm import tqdm
-#import time
-#import os
 import jieba
 import re 
-jieba.load_userdict("./model/all_addr_dict.txt")                     #加载自定义词典  
 import jieba.posseg as pseg 
-#import collections
-#import sklearn.utils
-#from sklearn.utils import shuffle
-#import myconfig as config
-#import tensorflow as tf
-#
-#from addr_classify import Addr_Classify
-
 import sys
 import const
 Const = const._const()
@@ -122,27 +103,21 @@ tran_prob = {'06': 0.00011000110001100011,\
 
 def _path(filepath):
     CURPATH = os.path.dirname(os.path.realpath(__file__))
-    _print("\n> CURPATH IS ", CURPATH)
     return os.path.join(CURPATH, filepath)
+
+jieba.load_userdict(_path("all_addr_dict.txt"))
 
 class Data_Helper(object):
 
     def __init__(self):
         _print("\ncls Data_Helper instance")
-        #assert self.arctic_inf_init() == Const.SUCC
-        #self.mongo_inf_init("myDB", "gz_gongan_case")
         self.odd= True
         self.btsize=32
-        self.mongo_inf_init("myDB", "gz_gongan_alarm_1617")
-        self.w2vm = gensim.models.word2vec.Word2Vec.load("./model/w2vm")
-        #self.dct = gensim.corpora.Dictionary.load("./model/myDctBak")
-        self.dct = gensim.corpora.Dictionary.load("./model/my.dct.bak")
-        self.ac =addr_classify.Addr_Classify(["2016年1月1日9时左右，报警人文群华在股市云岩区保利云山国际13栋1楼冬冬小区超市被撬门进入超市盗走现金1200元及一些食品等物品。技术科民警已经出现场勘查。"])
-        self.train_data_generator = self.gen_train_data('train')
-        self.eval_data_generator = self.gen_train_data("eval")
-        #self.tags = {'x':0.0, 'o':1.0,'a':2.0,'r':3.0,'v':4.0,'d':5.0}
+        #self.mongo_inf_init("myDB", "gz_gongan_alarm_1617")
+        self.dct = gensim.corpora.Dictionary.load(_path("myDctBak"))
+        self.train_data_generator = self.gen_train_data(_path("train"))
+        self.eval_data_generator = self.gen_train_data(_path("eval"))
         self.tags = {'o':0,'b':2,'i':1}# words bg mid end / addrs bg mid end
-        #self.tags = {'o':0,'b':1,'i':2,'e':3,'s':4,'a':5,'d':6,'r':7,'v':8}# words bg mid end / addrs bg mid end
 
     def common_data_prepare(self):
         """
@@ -1053,8 +1028,5 @@ if __name__ == "__main__":
         c,d,w = e.__next__()
         pass#pdb.set_trace()
         n-=1
-    #a,b=dh.next_batch(gen)
-    #clr_addrcrim_sum()
-    #combine_all()
 
 
