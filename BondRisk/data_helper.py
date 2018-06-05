@@ -1,23 +1,35 @@
 #coding=utf-8
-# utf-8
 
 # data_helper.py
 
-# sql handler for all mysql of my
-import datetime
+# sql handler for all mysql of my 
+import pdb
+
+#pdb.set_trace()
+import load_mysqL_from_localcpk
+import psycopg2
+import sqlalchemy
+from sqlalchemy import create_engine
 import pymysql
+import datetime
+import pymysql  
 import traceback
 import pandas as pd
-#import xgboost as xgb
+import xgboost as xgb
 import numpy as np
 import re
-from sklearn.manifold import TSNE
-from gensim import corpora
-import gensim
-import sklearn.cluster
-#import pdb
+
+
+def timeFormat(_strs):
+    #print(_strs)
+    num = re.findall("\d+", str(_strs))
+    #print(num)
+    _append=6-len(num)
+    [num.append('0') for i in range(_append)]
+    return datetime.datetime.strptime(",".join(num), '%Y,%m,%d,%H,%M,%S')
 
 model_labels_2 = ["企业名称","发布日期","Label","credit_recent","credit_ago","credit_trend","60","120","180","债券风险60","债券风险120","债券风险180","个人风险60","个人风险120","个人风险180","财务风险60","财务风险120","财务风险180","经营风险60","经营风险120","经营风险180","行业风险60","行业风险120","行业风险180","企业风险60","企业风险120","企业风险180","sub120_60","sub180_120"]
+
 
 model_labels = \
 ["企业风险->知识产权->著作权","行业风险->行业分析->黑天鹅","企业风险->管理风险->泄密","企业风险->基本信息变更->人员变动","企业风险->","企业风险->人力资源->招聘猛增",\
@@ -103,20 +115,20 @@ class ISqlHelper(object):
 
   def update(self, conditions=None, value=None):
     raise NotImplemented
-
+  
   def select(self, count=None, conditions=None):
     raise NotImplemented
 
 #------
 class SqlHelper(ISqlHelper):
     def __init__(self, Config):
-        self.connect = pymysql.Connect(
+        self.connect = pymysql.connect(  
               host=Config.ip,
-              port=Config.port,
+              port=Config.port,  
               user=Config.login,
               passwd=Config.pw,  #'lqh4kwHnfm5&iinnzGdl',  #"onfig.pw,
               db=Config.db,
-              charset='utf8'
+              charset='utf8'  
         )
         self.cursor = self.connect.cursor()
         self.config = Config
@@ -125,11 +137,11 @@ class SqlHelper(ISqlHelper):
         #cursor = conn.cursor()
         # exe sql
         #cursor.execute(sql, values)
-        ##print('mysql+mysqldb://%s:%s@%s/%s?charset=utf8"' % (Config.shandong_database, Config.login, Config.addr_ip, Config.shandong_table))
+        #print('mysql+mysqldb://%s:%s@%s/%s?charset=utf8"' % (Config.shandong_database, Config.login, Config.addr_ip, Config.shandong_table))
         #self.engine = create_engine('mysql+mysqldb://%s:%s@%s/%s?charset=utf8"' % (Config.shandong_database, Config.login, Config.addr_ip, Config.shandong_table))
         #DB_Session = sessionmaker(bind=self.engine)
         #self.session = DB_Session()
-
+  
     def init_db(self):
         BaseModel.metadata.create_all(self.engine)
 
@@ -142,7 +154,7 @@ class SqlHelper(ISqlHelper):
         area=value['area'], speed=value['speed'])
         self.session.add(proxy)
         self.session.commit()
-
+    
     def delete(self, conditions=None):
         if conditions:
             conditon_list = []
@@ -158,7 +170,7 @@ class SqlHelper(ISqlHelper):
             else:
                 deleteNum = 0
         return ('deleteNum', deleteNum)
-
+    
     def update(self, conditions=None, value=None):
 
         '''
@@ -185,15 +197,15 @@ class SqlHelper(ISqlHelper):
             else:
                 updateNum = 0
         return {'updateNum': updateNum}
-
+        
     def selectdescription(self, table=None, count=None,conditions=None):
         sql = "SELECT * FROM %s LIMIT 1;" % table
-        self.cursor.execute(sql)
+        self.cursor.execute(sql)  
         return self.cursor.description
 
     def selectany(self, table=None, count=None, conditions=None):
         sql = "SELECT * FROM %s LIMIT %d;" % (table,count)
-        self.cursor.execute(sql)
+        self.cursor.execute(sql)  
         return self.cursor.fetchall()
 
         '''
@@ -253,7 +265,7 @@ def days_shift_window(base, days):
         base = datetime.datetime.now()
     days = datetime.timedelta(days=days)
     return base, base-days
-
+    
 def todayStr():
     return str(datetime.datetime.now()).split(" ")[0]
 
@@ -264,7 +276,7 @@ def todayShiftStr(num):
 
 def filter_data_by_time(bond_risk_, day):
     # ex: bond_risk_.execute("select * from middleTable where (to_days(%s) - to_days(date_input) <=180 and to_days(now()) - to_days(date)<=180);"%day)
-    # only match the middleTable;
+    # only match the middleTable; 
      data_180_ = bond_risk_.execute("select * from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(%s) - to_days(date)<=180);"%day)
      data_150_ = bond_risk_.execute("select * from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(%s) - to_days(date)<=150);"%day)
      data_120_ = bond_risk_.execute("select * from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(%s) - to_days(date)<=120);"%day)
@@ -275,18 +287,23 @@ def filter_data_by_time(bond_risk_, day):
      v_lst = [ data_180_, data_150_, data_120_, data_90_, data_60_, data_30_]
      return dict(zip(k_lst, v_lst))
 
-def cnt_label_day(bond_risk_, comp, label, date):
-    sql_ = 'select cnt from middleTable where (to_days(now()) - to_days(date))<=%s  and label="%s" and compname="%s";'%(date,label,comp)
+def cnt_label_day(bond_risk_, comp, label, date, n):
+    _cntLst = []
+    sql_ = 'select cnt from middleTable where (to_days(now()) - to_days(date))<=%s  and label="%s" and compname="%s";'%(date+n,label,comp)
     try:
-        label_cnt = bond_risk_.execute(sql_)
-        return  label_cnt
+        cursor= bond_risk_.execute(sql_)
+        #cursor = bond_risk_.find({"compname":comp, "label":label})
+        for i in cursor:
+            if datetime.datetime.now()-timeFormat(i['date'])<(date+n):
+                _cntLst.append(i[cnt])
+        return  _cntLst
     except:
         #print(sql_)
         traceback.print_exc()
-        ##print(len(label_cnt))
+        #print(len(label_cnt))
         return 0.0
 
-def get_label_120(bond_risk_, comps, labels):
+def get_label_120(bond_risk_, comps, labels, n):
     dic_com = dict()
     breakcnt = 0
     for c in comps:
@@ -294,21 +311,21 @@ def get_label_120(bond_risk_, comps, labels):
         dic_label = dict()
         for l in labels:
             dic_date = dict()
-            for d in [60,120,180]:
+            for d in [120,60,]:
                 #_ = todayShiftStr(d)
-                cnt_comp_date_label = cnt_label_day(bond_risk_,c,l,d)
+                cnt_comp_date_label = cnt_label_day(bond_risk_,c,l,d,n)
                 b_ = 0
                 if cnt_label_day == 0:
                     b_ =  0
                 elif len(cnt_comp_date_label)>0:
                     #print(c,l,d)
                     for i in cnt_comp_date_label:
-                        b_+=i[0]
-                    ##print(cnt_comp_date_label)
+                        b_+=i
+                    #print(cnt_comp_date_label)
                     #print(b_)
                 dic_date[d]=b_
             dic_label[l] = dic_date
-        dic_com[c] = dic_label
+        dic_com[c] = dic_label   
         breakcnt+=1
         #if breakcnt>10:
         #    break
@@ -316,9 +333,9 @@ def get_label_120(bond_risk_, comps, labels):
     return dic_com
 
 def cell_fill(_panel, i, c):
-    ##print("> cell_fill", i, c)
+    #print("> cell_fill", i, c)
     data = _panel[i]
-    ##print(data)
+    #print(data)
     try:
         if c =="180":
             cnt = data.loc["180",:].sum()
@@ -356,33 +373,35 @@ class TimeCnt():
         self.time_mark()
         #print(">耗时: ", (self.deque[-1]-self.deque[-2]).microseconds)
 
-def debug(func):
-    def new_func(a, b):
+def debug(func):  
+    def new_func(a, b):  
         #print("> ",func)
         try:
-            result = func(a, b)
+            result = func(a, b)  
             #print("> ",func, result)
         except:
             traceback.print_exc()
-    return new_func
+    return new_func  
 
-def time_cnt(func):
-    def new_func(a, b):
+def time_cnt(func):  
+    def new_func(a, b):  
         _TimeCnt = TimeCnt()
         #_TimeCnt.cnt_time()
-        result = func(a, b)
+        result = func(a, b)  
         _TimeCnt.cnt_time()
-        #print "result:", result, "used:", (end_tiem - start_time).microseconds, "μs"
+        #print "result:", result, "used:", (end_tiem - start_time).microseconds, "μs"  
         #return result
-    return new_func
+    return new_func  
 
 @time_cnt
 def prt(a):
-    print(a)
+    pass
+    #print(a)
 
 @debug
 def prt(a):
-    print(a)
+    pass
+    #print(a)
 
 def load_model(model_file='/home/siyuan/data/xgb.model'):
     bst = xgb.Booster()
@@ -395,7 +414,8 @@ def predict(bst, test_X, test_Y):
     return pred
 
 def save_result(pred):
-    print(pred)
+    pass
+    #print(pred)
 
 def update_every_day(model_labels_2, model_labels, model_columns_base):
     pass
@@ -420,15 +440,32 @@ def set_dummy(df, _is=True):
         df = df.astype(np.float64)
         return df
 
+def get_label_time_window(bond_risk_, from_, to_):
+    cursor = bond_risk_.find()
+    _labels = []
+    _compnames= []
+    for i in cursor:
+        #print(">>> i", i)
+        dateinput = timeFormat(i['date_input'])
+        fromnow180 = (datetime.datetime.now()-datetime.timedelta(from_))
+        fromnow60 = (datetime.datetime.now()-datetime.timedelta(to_))
+        if dateinput<fromnow180:
+            if dateinput>fromnow60:
+               _labels.append(i['label'])
+               _compnames.append(i['compname'])
+    #print("_labels", "_compnames")
+    #print(_labels, _compnames)
+    return _labels, _compnames
+
 def pred_all(df):
     collections.Counter(predict(bst, df.iloc[:1200][(True-df.iloc[:1200]['120'].isin([np.NaN]))], df.iloc[:,1]))
 
-def main():
 #    try:
 #        update_every_day(model_labels_2, model_labels, model_columns_base)
 #    except:
 #        traceback.print_exc()
 #    prt("a","b")
+def main(n):
     _tc = TimeCnt()
     _tc.cnt_time()
     #model_labels_2 = model_labels_2
@@ -441,18 +478,29 @@ def main():
     #storm_110_ = SqlHelper(Configooo)
     _tc.cnt_time()
     today = todayStr()
-    bond_risk_ = SqlHelper(Config_bond_risk)
-    label_120_ = bond_risk_.execute("select label from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(now()) - to_days(date)<=180);")
-    _tc.cnt_time()
-    compname_120_ = bond_risk_.execute("select compname from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(now()) - to_days(date)<=180);")
+
+    #from load_mysqL_from_localcpk import load_mongodb_conn
+    #bond_risk_ = load_mysqL_from_localcpk.load_mongodb_conn()
+    mysql_bond_risk_ = SqlHelper(Config_bond_risk)
+    #cursor = bond_risk_.find()
+    #for i in cursor:
+        #print(i)
+        #pdb.set_trace()
+    #    timeFormat(i['date_input'])
+    label_120_ = mysql_bond_risk_.execute("select label from middleTable where (to_days(now()) - to_days(date)>=%d);"% n)
+    compname_120_ = mysql_bond_risk_.execute("select compname from middleTable where (to_days(now()) - to_days(date)>=%d);"% n)
+    #label_120_ = mysql_bond_risk_.execute("select label from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(now()) - to_days(date)<=%d);"% n)
+    #_tc.cnt_time()
+    #compname_120_ = mysql_bond_risk_.execute("select compname from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(now()) - to_days(date)<=%d);"% n)
+    #label_120_, compname_120_ = get_label_time_window(bond_risk_, n, n-120)
     set_ = set()
-    [set_.add(i[0]) for i in label_120_]
+    [set_.add(i) for i in label_120_]
     label_lst_ = list(set_)
     _tc.cnt_time()
     set_.clear()
-    [set_.add(i[0]) for i in compname_120_]
+    [set_.add(i) for i in compname_120_]
     compname_lst_ = list(set_)
-    _dic = get_label_120(bond_risk_, compname_lst_, label_lst_)
+    _dic = get_label_120(mysql_bond_risk_, compname_lst_, label_lst_, n)
     _tc.cnt_time()
     _panel = pd.Panel(_dic)
     _panel = _panel.fillna(0.0)
@@ -466,21 +514,21 @@ def main():
     _columns = model_labels
     _columns_2 = model_labels_2
     #print("> ready to get data")
-    _cnt = 0
+    _cnt = 0 
     for i in _index:
         _cnt+=1
         if _cnt % 100 ==1:
             pass
-            #print("> handle the,", i, _cnt)
+            #print(">>>> !!! handle the,", i, _cnt)
         #if _cnt > 300:
             #break
-            ##print("> handle the,", i, _cnt)
+            #print("> handle the,", i, _cnt)
         for c in _columns:
             df_4_model.loc[i,c] = cell_fill(_panel, i,c)
         df_4_model.loc[i, "企业名称"] = i
         df_4_model.loc[i, "发布日期"] = datetime.datetime.now()
         df_4_model.loc[i, "credit_recent"] = 0
-        df_4_model.loc[i, "credit_ago"] = 0
+        df_4_model.loc[i, "credit_ago"] = 0 
         df_4_model.loc[i, "credit_trend"] = 0
 
         df_4_model.loc[i, "60"] = _panel[i].loc[60,:].sum()
@@ -520,193 +568,44 @@ def main():
     #_x = _x[(_x["60"]>0)]
     _x = _x[(_x["120"]>0)]
     train_separator = len(_x.index)
+    #print(train_separator)
     _pred_data = pd.concat([_x, _z], axis=0)
 
     _pred_data = set_dummy(_pred_data, False)
     # output predict label
     bst = xgb.Booster()
     bst.load_model("/home/siyuan/data/xgb.model")
+    #pdb.set_trace()
 
     #_lz = pd.read_csv("/home/siyuan/bond_risk/_z.csv")["Label"]
     result_ = predict(bst, _pred_data, _pred_data.iloc[1])
     dict_ = dict(zip(list(_pred_data.index), result_))
     dict_res = dict(zip(list(_pred_data.index)[:train_separator], result_[:train_separator]))
+    #dict_res = dict(zip(list(_pred_data.index), result_))
 
     #print(collections.Counter(list(result_)))
     #print(collections.Counter(list(result_)[:train_separator]))
     cnt = 0
+    #pdb.set_trace()
+    #print(dict_res)
     for i in dict_res.keys():
+        #sql_ = "INSERT INTO resultTable VALUES('', '%s', CURTIME(), '%s');"%(i,str(format(dict_res[i],'.9e')))
         sql_ = "INSERT INTO resultTable VALUES('', '%s', CURTIME(), '%s');"%(i,str(format(dict_res[i],'.9e')))
         #print(sql_)
-        sql_res_ = bond_risk_.execute(sql_)
+        sql_res_ = mysql_bond_risk_.execute(sql_)
         #print(sql_res_)
         cnt+=1
-    bond_risk_.connect.commit()
-
-import time
-import matplotlib.pyplot as plt
-def main2():
-    # this is the second method for us to pick the risk comp.
-    # 1. we read all the data from db
-    # 2. we solve the data with tsne to low-dim
-    # 3. dbscan to find the diff point
-    nparr,compnames = load_all_data_from_db()
-    print("all data load from mysql")
-    low_dim, _df_ = low_dim_with_tsne(nparr)
-    print(low_dim, _df_)
-    print("all data low dim")
-    ##print(_df.header())
-    y_pred, df = dbscan(low_dim, _df_)
-    print(y_pred, df)
-    print("dbscan")
-    return y_pred, df,compnames
-
-import numpy as np
-def dbscan(low_dim_embs,df):#filepath="./low_dim_embs.csv"):
-    #df = pd.read_csv(filepath)
-    #print(df)
-    dbscan = sklearn.cluster.DBSCAN(eps=0.4,min_samples=5,metric='euclidean',algorithm='auto',leaf_size=30,p=None)#,random_state=None)
-    y_pred = dbscan.fit_predict(low_dim_embs)
-    plt.scatter(low_dim_embs[:, 0], low_dim_embs[:, 1], c=y_pred)
-    _t = time.time()
-    plt.savefig("dbscan%s.png"%str(_t))
-    #plt.show()
-    return y_pred, df
-
-def low_dim_with_tsne(df):
-  #df = pd.read_csv("base_data.csv")
-  #print(df)
-  #while(1):
-  #    pass
-  print("this is low_dim_with_tsne")
-  try:
-    tsne = TSNE(perplexity=30, n_components=2, init='pca', n_iter=1000, method='exact')
-    print("\n> tsne init finish")
-    print(df)
-    ndarr = df
-    low_dim_embs = tsne.fit_transform(ndarr)
-    return low_dim_embs, ndarr
-  except:
-      traceback.print_exc()
-      while(1):
-          pass
-
-def load_all_data_from_mongodb():
-  mid_tb = "middleTable"
-
-  import db_interface
-  mongodb = db_interface.MongoConn("remote")
-  mongodb_middleTable = mongodb.get_coll_with_name("middleTable")
-
-  #======
-  compname= list(set(mongodb_middleTable.find("compname")))
-  labels= list(set(mongodb_middleTable.find("labels")))
-  date= list(set(mongodb_middleTable.find("date")))
-  dic={}
-  for comp in compname:
-      compdic = {}
-      dic[comp]=compdic
-      for onedate in date:
-          labeldic= {}
-          compdic[onedate]=labeldic
-          for label in labels:
-              labeldic[label]=0
-  #pdb.set_trace()
-  """
-  panel = pd.Panel(_dic)
-  #======
-  index_lst = []
-  for i in compname:
-      for j in labels:
-          index_lst.append(str(i)+'&'+str(j))
-  df = pd.DataFrame(index=index_lst, column=labels)
-  cursor = mongodb.find()
-  for i in cursor:
-      df
-  """
-
-"""
-def load_all_data_from_mysql_db():
-    pass
-    conn = pymysql.Connect(
-        host = "117.107.241.69",
-        port = 3310,
-        user = "production",
-        passwd = "V2aBPgBwb8EuPkSe",
-        db = "zhaiquanyujing",
-        charset = 'utf8',
-    cursor = conn.cursor()
-    cursor.execute('select * from middleTable;')
-"""
-
-def load_all_data_from_db():
-  #if False:
-  """
-  mid_tb = "middleTable"
-  tag_tb = "tag_info_t"
-  result_tb = "resultTable"
-  conn = pymysql.Connect(
-          host = "117.107.241.69",
-          port = 3310,
-          user = "production",
-          passwd = "V2aBPgBwb8EuPkSe",
-          db = "zhaiquanyujing",
-          charset = 'utf8',
-  )
-  cursor = conn.cursor()
-  cursor.execute('select * from middleTable;')
-  print('\n>> we get all the date from middleTable;')
-  sql_lst = []
-  for i in cursor:
-      sql_lst.append(list(i))
-  middleTable = pd.DataFrame(sql_lst)
-  """
-  from db_inf import MongoConn
-  mg = MongoConn("remote")
-  middle_table_coll = mg.get_coll_with_name('middleTable')
-  middleTable = pd.read_csv("middleTable.csv")
-  print(middleTable.head())
-  compnames = list(set(middleTable['1']))
-  labels= list(set(middleTable['3']))
-  dates= list(set(middleTable['2']))
-  arr_lst = []
-  cntcnt = 0
-  for comp in compnames:
-      print(comp)
-      cntcnt+=1
-      item_df = middleTable[middleTable['1']==comp]
-      df=pd.DataFrame(index=dates,columns=labels)
-      middle_table_comp =  middleTable[middleTable['1']==comp]
-      for i in middle_table_comp.index:
-          lb=middle_table_comp.loc[i,"3"]
-          dt=middle_table_comp.loc[i,"2"]
-          ct=middle_table_comp.loc[i,"4"]
-          #print(lb,dt,ct)
-          df.loc[dt,lb]=ct
-      df=df.fillna(0)
-      out = np.array(df).flatten()
-      #print(out)
-      # for i in out:
-      #     if i!= 0:
-      #         print("there is a one in the list")
-      arr_lst.append(out)
-  return arr_lst,compnames
+    pdb.set_trace()
+    mysql_bond_risk_.connect.commit()
+    #import read_result_sql
+    #read_result_sql.load_resultTable()
 
 if __name__ == "__main__":
-    y_pred, df, compnames = main2()
-    dd=dict(zip(compnames[:len(y_pred)],y_pred))
-    dp = {}
-    for k in dd.keys():
-        dp[k] = float(dd[k]) / len(list(set(list(dd.values()))))
-    df=pd.DataFrame(list(dd.items()))
-    df.to_csv('y_pred.csv',index=False)
-    bond_risk_ = SqlHelper(Config_bond_risk)
-    for i in dp.keys():
-        sql_ = "INSERT INTO resultTable VALUES('', '%s', CURTIME(), '%s');"%(i,str(dp[i]))
-        #print(sql_)
-        sql_res_ = bond_risk_.execute(sql_)
-        #print(sql_res_)
-        cnt+=1
-    bond_risk_.connect.commit()
-    #df.to_csv('df.csv',index=False)
     pass
+    """
+    for i in range(0, 30)[::-1]:
+        main(i)
+        import read_result_sql
+        read_result_sql.load_resultTable()
+        break
+    """

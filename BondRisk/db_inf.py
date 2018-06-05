@@ -11,13 +11,11 @@ import pdb
 #DEBUG = False
 DEBUG = True
 
-
-
 cq={}
 cq['ip']="113.204.229.74"
-cq['db']="taiyuan"
+cq['db']="srcdata"
 #cq['tb']="gz_gongan_alarm_1617"
-cq['tb']="original_data"
+cq['tb']="gz_gongan_case"
 cq['login']="root"
 cq['pw']="123456"
 cq['port']=15004
@@ -329,11 +327,12 @@ if __name__ == "__main__":
     mg = MongoConn("remote")
     _d = []
     _d.append(db_dict['rs'])
-    #_d.append(db_dict['cq'])
-    #_d.append(db_dict['gx'])
-    #_d.append(db_dict['sd'])
-    #_d.append(db_dict['sdm'])
-    #_d.append(db_dict['tt'])
+    _d.append(db_dict['cq'])
+    _d.append(db_dict['gx'])
+    _d.append(db_dict['sd'])
+    _d.append(db_dict['sdm'])
+    _d.append(db_dict['tt'])
+
     for i in _d:
         print("database is ", i)
         try:
@@ -345,7 +344,7 @@ if __name__ == "__main__":
             if DEBUG:
                 print(tbs)
 
-            #tbs = ['gz_gongan_case','gz_gongan_alarm_1617','original_data']
+            tbs = ['gz_gongan_case','gz_gongan_alarm_1617','original_data']
             for tb in list(tbs):
                 if DEBUG:
                     print(tb)
