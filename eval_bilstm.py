@@ -14,6 +14,7 @@ from tqdm import tqdm
 import time
 import os
 import jieba
+jieba.load_userdict("./model/all_addr_dict.txt")                     #加载自定义词典  
 import collections
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import sklearn.utils
@@ -218,8 +219,50 @@ class Eval_Ner(object):
                 traceback.print_exc()
                 return -2
 
-    def predict(self):
-        #with tf.device('/cpu:0'):    
+    #def data_prepare_txt(self, fname="./source.txt"):
+    #def data_prepare_txt(self, fname="./taiyuan.txt"):
+    def data_prepare_txt(self, fname="./gz_jyaq.txt"):
+
+        result = []
+        f= open(fname)
+        cont = f.read()
+
+        pdb.set_trace()
+        lines= cont.split("\n")
+        print(len(lines))
+        pdb.set_trace()
+        for line in lines:
+            sent = list(jieba.cut(line))
+            res = []
+            if len(sent)>200:
+                res.extend(sent[:200])
+            else:
+                res.extend(sent)
+                for i in range(200-len(sent)):
+                    res.extend([" "])
+            print(len(res))
+            assert len(res) == 200
+            result.append(res)
+            if len(result)%32==0 and len(result)>1:
+                print(np.array(result).shape)
+                yield result
+                result = []
+
+    def data_prepare(self):
+        res = []
+        datasrc = self.data_helper
+        evalGen = datasrc.gen_train_data("eval")
+        evalTaiyuanGen = datasrc.gen_train_data("evalTaiyuan")
+        batchEval=datasrc.next_batch_eval(evalGen)
+        batchEvalTaiyuan=datasrc.next_batch_eval(evalTaiyuanGen)
+        res.append(batchEvalTaiyuan.__next__())
+        res.append(batchEvalTaiyuan.__next__())
+        res.append(batchEval.__next__())
+        res.append(batchEval.__next__())
+        return res
+
+    def predict_txt(self):
+        #with tf.device('/cpu:0'): 
         rec_dict={}
         rec_dict['cnt']=0
         dct=gensim.corpora.Dictionary.load("./model/my.dct.bak")
@@ -239,30 +282,36 @@ class Eval_Ner(object):
         f = open("predictable.txt", "a+")
         #pdb.set_trace()
         #w2vm = gensim.models.word2vec.Word2Vec.load(os.path.join(CURPATH, "model/w2vm"))
-        while(1):
-            rec_dict['cnt']+=1
-            #pdb.set_trace()
-            X_batch, y_batch, W_batch = "","",""
-            #if rec_dict['cnt']<-20:
-            #    pass
-            #    continue
-            if rec_dict['cnt']<3:
-                X_batch, y_batch, W_batch=batchEvalTaiyuan.__next__()
-            elif rec_dict['cnt']<600:
-                X_batch, y_batch =batcheEval.__next__()
-                W_batch = []
-                for i in X_batch:
-                    words = []
-                    for j in i:
-                        ret = self.dct.get(j)
-                        if ret == None:
-                            words.append("None")
-                        else:
-                            words.append(ret)
-                    W_batch.append(words)
-                W_batch = np.array(W_batch)
-            else:
-                break
+        #feed_dict = self.data_prepare()
+        feed_ = self.data_prepare_txt()
+        rec_dict['cnt']=0
+        for i in range(10000):
+            batch = feed_.__next__()
+            print(len(batch))
+            assert len(batch) == 32
+            W_batch ,X_batch ,y_batch = [],[],[]
+            for line in batch:
+                print(len(line))
+                assert len(line) == 200
+                _, ws = [],[]
+                for word in line:
+                    try:
+                        w2d = self.dct.token2id[word]
+                        _.append(w2d)
+                    except:
+                        self.dct.add_documents([[word]])
+                        w2d = self.dct.token2id[word]
+                        _.append(w2d)
+                    ws.append(word)
+
+                X_batch.extend(_)
+                y_batch.extend([0]*200)
+                W_batch.extend(ws)
+
+            W_batch = np.array(W_batch).reshape(32,200)
+            X_batch = np.array(X_batch).reshape(32,200)
+            y_batch = np.array(y_batch).reshape(32,200)
+
             #pdb.set_trace()
             #X_batch, y_batch = datasrc.next_batch('train')
             #pdb.set_trace()
@@ -282,7 +331,6 @@ class Eval_Ner(object):
                     _print(names[i], myvars[i])
                 except:
                     _print(names[i], "None")
-       
             y_=np.argmax(_y_pred_meta.reshape(6400,3),1).reshape(32,200)
             # pdb.set_trace()
             y=y_batch.reshape(32,200)
@@ -311,7 +359,139 @@ class Eval_Ner(object):
                     wordStr+=w_sample
                     if x_sample==None:
                        x_sample="None"
-                       dct.add_documents([["None"]])
+                       #dct.add_documents([["None"]])
+                       #x_sample = "None"
+                       #s+="; "
+                       assert not x_sample == None
+                    xIdStr+=x_sample
+                    print(pred_sample)
+                    if pred_sample==1 or pred_sample==2:
+                        predStr+=w_sample
+                    print(y_sample)
+                    if y_sample==1 or y_sample==2:
+                        yStr+=w[i][m]
+                    if X_batch[i][m] == 244:
+                        break
+                f.write("\n> text: "+wordStr+"\n")
+                if predStr=="":
+                    predStr="该行文本未能检出"
+                #f.write("\n> wordid_rever: "+xIdStr+"\n\n")
+                #f.write("\n> mark文本: "+yStr+"\n\n")
+                f.write("\n> output文本: "+predStr+"\n===")
+        f.close()
+    def predict(self):
+        #with tf.device('/cpu:0'): 
+        rec_dict={}
+        rec_dict['cnt']=0
+        dct=gensim.corpora.Dictionary.load("./model/my.dct.bak")
+        self.dct=dct
+        datasrc = self.data_helper
+        evalGen = datasrc.gen_train_data("eval")
+        evalTaiyuanGen = datasrc.gen_train_data("evalTaiyuan")
+        batcheEval=datasrc.next_batch_eval(evalGen)
+        batchEvalTaiyuan=datasrc.ext_batch_eval(evalTaiyuanGen)
+        n=1
+        _acc, _acc_average =  0.0, 0.0
+        _y_batch_lst = []
+        _lr = 1e-4
+        start_time = time.time()
+        #import prettytable
+        #from prettytable import PrettyTable
+        f = open("predictable.txt", "a+")
+        #pdb.set_trace()
+        #w2vm = gensim.models.word2vec.Word2Vec.load(os.path.join(CURPATH, "model/w2vm"))
+        #feed_dict = self.data_prepare()
+        feed_dict = self.data_prepare_txt()
+        rec_dict['cnt']=0
+        for batch in feed_dict:
+            rec_dict['cnt']+=1
+            #pdb.set_trace()
+            X_batch, y_batch, W_batch = [],[],[]
+            if len(batch)==3:
+                [X_batch, y_batch, W_batch] = batch
+            elif len(batch)==2:
+                [X_batch, y_batch] = batch
+            elif len(batch)==1:
+                [W_batch] = batch
+            if len(X_batch) == 0:
+                for i in W_batch:
+                    words = []
+                    for j in i:
+                        ret = -1
+                        try:
+                           ret = self.dct.token2id[j]
+                        except:
+                           self.dct.add_documents([[j]])
+                           ret = self.dct.token2id[j]
+                        words.append(ret)
+                    X_batch.append(words)
+            if len(W_batch) == 0:
+                for i in W_batch:
+                    words = []
+                    for j in i:
+                        ret = self.dct.get(j)
+                        if ret == None:
+                            words.append(" ")
+                        else:
+                            words.append(ret)
+                    W_batch.append(words)
+            if len(y_batch) == 0:
+                for i in X_batch:
+                    tag= []
+                    for j in i:
+                        tag.append(0)
+                    y_batch.append(tag)
+            W_batch = np.array(W_batch).reshape(32,200)
+            X_batch = np.array(X_batch).reshape(32,200)
+            y_batch = np.array(y_batch).reshape(32,200)
+            #pdb.set_trace()
+            #X_batch, y_batch = datasrc.next_batch('train')
+            #pdb.set_trace()
+            _print(X_batch.shape)
+            _print(y_batch.shape)
+            #pdb.set_trace()
+            feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.batch_size:32, self.keep_prob:1.0}
+            #feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-4, self.batch_size:32, self.keep_prob:1.0}
+            #_print("y_pred 预测值是:", sess.run(y_pred_meta, feed_dict=feed_dict))
+            fetches = [self.correct_prediction, self.y_pred_meta, self.accuracy, self.TP, self.TN, self.FP, self.FN, self.Precision, self.Recall,self.Fscore]
+            print(feed_dict)
+            [_corr, _y_pred_meta, _acc, _tp,_tn,_fp,_fn,_precision,_recall,_fscore] = self.sess.run(fetches, feed_dict=feed_dict) # the cost is the mean cost of one batch
+            myvars = [_corr,_y_pred_meta,_acc,_tp,_tn,_fp,_fn,_precision,_recall,_fscore]
+            names = ['_corr', '_y_pred_meta','_acc','_tp','_tn','_fp','_fn','_precision','_recall','_fscore']
+            for i in range(len(names)):
+                try:
+                    _print(names[i], myvars[i])
+                except:
+                    _print(names[i], "None")
+            y_=np.argmax(_y_pred_meta.reshape(6400,3),1).reshape(32,200)
+            # pdb.set_trace()
+            y=y_batch.reshape(32,200)
+            x=X_batch.reshape(32,200)
+            w=W_batch.reshape(32,200)
+            _print("==========================")
+            _print("\n> y_ ",y_)
+            _print("==========================")
+            #judge_lst = []
+            for i in range(0,32):
+                print("\n> ===================================")
+                #table = PrettyTable(["_id","predict/y_inputi/x_input"])
+                #table.sort_key("_id")
+                #table.reversesort = True
+                yStr=""
+                predStr=""
+                xIdStr=""
+                wordStr=""
+                for m in range(0, 200):
+                    #pdb.set_trace()
+                    cnt=200*i+m
+                    pred_sample=y_[i][m]# y of pred
+                    y_sample=y[i][m]# y of label
+                    x_sample=dct.get(x[i][m])#x of id ==> x of word
+                    w_sample=(w[i][m])#x of id ==> x of word
+                    wordStr+=w_sample
+                    if x_sample==None:
+                       x_sample="None"
+                       #dct.add_documents([["None"]])
                        #x_sample = "None"
                        #s+="; "
                        assert not x_sample == None
@@ -504,6 +684,6 @@ if __name__ == "__main__":
         #print(allwords, basewords,predwords)
         #with open("/home/distdev/bilstm/hund.txt", "a+") as f:
         #    f.write("> final :" + ",".join(wc))
-    eval_ins.predict()
+    eval_ins.predict_txt()
 
 

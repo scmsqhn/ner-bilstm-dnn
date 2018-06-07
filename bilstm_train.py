@@ -40,10 +40,10 @@ print(CURPATH)
 print(PARPATH)
 #from bilstm import addr_classify
 #from bilstm import eval_bilstm
-sys.path.append("/home/distdev")
-import bilstm
-from bilstm import datahelper
-from bilstm.datahelper import Data_Helper
+sys.path.append("/home/distdev/BilstmGit")
+import ner_bilstm_dnn
+import datahelper
+from datahelper import Data_Helper
 #from eval_bilstm import Eval_Ner
 #from bilstm import auto_encode
 #from bilstm import text_cnn
@@ -108,21 +108,21 @@ _print(Const.SUCC)
 _print(Const.FAIL)
 
 """
-#------- paraline struct init for 15001 15002 15003 
+#------- paraline struct init for 15001 15002 15003
 # init the paral line struct
 global NAME
 global server
 NAME = "server_15001"
 #NAME = "server_15002"
 #NAME = "server_15003"
-cluster=tf.train.ClusterSpec({  
-    "worker": [  
-        "103.204.229.74:15001",#格式 IP地址：端口号，第1台机器的IP地址 ,在代码中需要用这台机器计算的时候，就要定义：/job:worker/task:0  
-        "103.204.229.74:15002",#格式 IP地址：端口号，第2台机器的IP地址 ,在代码中需要用这台机器计算的时候，就要定义：/job:worker/task:1 
-    ],  
-    "ps": [  
-        "103.204.229.74:15003",#格式 IP地址：端口号，第3台机器的IP地址 ,在代码中需要用这台机器计算的时候，就要定义：/job:ps/task:0  
-    ]})  
+cluster=tf.train.ClusterSpec({
+    "worker": [
+        "103.204.229.74:15001",#格式 IP地址：端口号，第1台机器的IP地址 ,在代码中需要用这台机器计算的时候，就要定义：/job:worker/task:0
+        "103.204.229.74:15002",#格式 IP地址：端口号，第2台机器的IP地址 ,在代码中需要用这台机器计算的时候，就要定义：/job:worker/task:1
+    ],
+    "ps": [
+        "103.204.229.74:15003",#格式 IP地址：端口号，第3台机器的IP地址 ,在代码中需要用这台机器计算的时候，就要定义：/job:ps/task:0
+    ]})
 if NAME == "15001":
     global server
     server = tf.train.Server(cluster,job_name='worker',task_index=0)#找到‘worker’名字下的，task0，也就是机器A
@@ -134,13 +134,13 @@ elif NAME == "15003":
     server = tf.train.Server(cluster,job_name='ps',task_index=0)#找到‘worker’名字下的，task0，也就是机器A
     server.join()
 
-paral_saver = tf.train.Saver()  
-paral_summary_op = tf.merge_all_summaries()  
-paral_init_op = tf.initialize_all_variables()  
-paral_sv = tf.train.Supervisor(init_op=init_op, summary_op=summary_op, saver=saver)  
-with paral_sv.managed_session(server.target) as sess:  
-    while 1:  
-        print sess.run([addwb,mutwb,divwb])  
+paral_saver = tf.train.Saver()
+paral_summary_op = tf.merge_all_summaries()
+paral_init_op = tf.initialize_all_variables()
+paral_sv = tf.train.Supervisor(init_op=init_op, summary_op=summary_op, saver=saver)
+with paral_sv.managed_session(server.target) as sess:
+    while 1:
+        print sess.run([addwb,mutwb,divwb])
 
 with tf.device(tf.train.replica_device_setter(worker_device='/job:worker/task:0',cluster=cluster)):
     # do sth here
@@ -259,10 +259,8 @@ class Train_Bilstm_Ner(object):
             A single training step
             """
             _print("\n> run train_step_att")
-
             fetch =  [self.att_layer.global_step, self.att_layer.train_op, self.att_layer.loss, self.att_layer.accuracy, self.att_layer.predictions]
             _feed_dict= {self.att_layer.input_x: x_bh, self.att_layer.input_y: y_bh, self.att_layer.dropout_keep_prob: 0.5}
-
             _print(_feed_dict)
             result = sess.run(fetch, feed_dict=_feed_dict)
             #_, _step, _loss, _accuracy = sess.run(fetch, feed_dict)
@@ -411,7 +409,7 @@ class Bilstm_Att(object):
         cnt = 0
         for i,j,p,pa in zip(list(X_batch.reshape(2000)), list(y_batch.reshape(2000)), _y_pred_meta.reshape(2000,8), _pred_att.reshape(2000,8)):
            try:
-               assert self.datahelper.dct[i] != -1             
+               assert self.datahelper.dct[i] != -1
            except:
                self.datahelper.dct.add_documents([i])
 
@@ -477,14 +475,14 @@ class Bilstm_Att(object):
         self.hidden_size = 256# 隐含层节点数
         self.layer_num = 4        # bi-lstm 层数
         self.max_grad_norm = 9.0  # 最大梯度（超过此值的梯度将被裁剪）
-        self.model_save_path = _path("model/bilstm.ckpt") # 模型保存位置
+        self.model_save_path = _path("model/crimAddrBilstm.ckpt") # 模型保存位置
         self.checkpoint_path = _path("model")  # 模型保存位置
         _print(self.model_save_path)
         _print(self.checkpoint_path)
         self.lastcost = 0.0
-        self.tf_batch_num  = 200000
-        self.max_epoch = 20
-        self.max_max_epoch = 60
+        self.tf_batch_num  = 300
+        self.max_epoch = 30
+        self.max_max_epoch = 6000
         self.btsize = 32
 
 # ====================== model inout=====================
@@ -496,7 +494,7 @@ class Bilstm_Att(object):
         #with tf.variable_scope("embedding", reuse=None) as embedding_scope:
         #embedding_scope.reuse_variables()
         with tf.device("/cpu:0"):
-            self.embedding = tf.get_variable("embedding", [self.vocab_size, self.embedding_size], dtype=tf.int32) 
+            self.embedding = tf.get_variable("embedding", [self.vocab_size, self.embedding_size], dtype=tf.int32)
 
             # 将输入seq用embedding表示, shape=[batch, steps, hidden_size]
             #inputs = tf.nn.embedding_lookup(embedding, self._input_data)
@@ -525,20 +523,50 @@ class Bilstm_Att(object):
         cell = rnn.LSTMCell(self.hidden_size, reuse=tf.AUTO_REUSE)#tf.get_variable_scope().reuse)
         return rnn.DropoutWrapper(cell, output_keep_prob=self.keep_prob)
 
-    def init_bi_lstm(self, vocab_size, embedding_size, X_inputs):
+    def linecnt(self,lin): # return combine k
+        res = []
+        cnti=0
+        cntj=0
+        for i in lin:
+            for j in lin:
+                if i == j:
+                    continue
+                if not j==0:
+                    res.append([i,j])
+                cntj+=1
+            cnti+=1
+        return res
 
+    def self_att(self, words2d, lbs2d, window_size=7):
+        for words,lbs in zip(words2d,lbs2d):
+          lenth = len(words)
+          w2l = zip(words,lbs)
+          for i in range(lenth-window_size):
+            words = words[i,i+7]
+            lbs = lbs[i,i+7]
+            for word1 in words:
+                for word2,lb in zip(words,lbs):
+                    if word1 == word2:
+                        continue
+                    if lb==0:
+                        continue
+                    else:
+                        try:
+                            self.attdct["%s&%s"%(word1,word2)]+=1
+                        except KeyError:
+                            self.attdct["%s&%s"%(word1,word2)]=1
+
+    def init_bi_lstm(self, vocab_size, embedding_size, X_inputs):
             #with tf.variable_scope('my_lstm_cell', reuse=True) as my_lstm_cell:
             """build the bi-LSTMs network. Return the self.y_pred"""
             # self.X_inputs.shape = [batchsize, self.timestep_size]  -  inputs.shape = [batchsize, self.timestep_size, embedding_size]
-
-            #self.embedding = tf.get_variable("embedding", [self.vocab_size, self.embedding_size], dtype=tf.int32) 
-            embedding = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0))
-
+            #self.embedding = tf.get_variable("embedding", [self.vocab_size, self.embedding_size], dtype=tf.int32)
+            #embedding = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0))
+            embedding = self.embedding
             inputs = tf.nn.embedding_lookup(embedding, X_inputs)
             #inputs = self.X_inputs
             int_inputs = tf.cast(inputs, tf.int32)
             float_inputs = tf.cast(inputs, tf.float32)
-
             #with tf.variable_scope('bidirectional_rnn',reuse=True) as bidirectional_rnn:
             #    tf.get_variable_scope().reuse_variables()
             #with tf.variable_scope('bidirectional_rnn',reuse=Truetf.get_variable_scope().reuse) as bidirectional_rnn:
@@ -546,22 +574,17 @@ class Bilstm_Att(object):
             #bidirectional_rnn.reuse_variables()
             outputs_fw = []
             #state_fw.reuse_variables()
-
             #with tf.variable_scope('fw', reuse=True) as fw:
             #    tf.get_variable_scope().reuse_variables()
-
             # ** 1.构建前向后向多层 LSTM
             #cell = rnn.BasicLSTMCell(self.hidden_size)#tf.get_variable_scope().reuse)
             #cell = rnn.LSTMCell(self.hidden_size)#tf.get_variable_scope().reuse)
             #rnncell = rnn.DropoutWrapper(cell, output_keep_prob=self.keep_prob)
-    
             cell_fw = rnn.MultiRNNCell([self.bilstm_cell() for _ in range(self.layer_num)], state_is_tuple=True)
             cell_bw = rnn.MultiRNNCell([self.bilstm_cell() for _ in range(self.layer_num)], state_is_tuple=True)
-
             # ** 2.初始状态
             initial_state_fw = cell_fw.zero_state(self.batch_size, tf.float32)
             initial_state_bw = cell_bw.zero_state(self.batch_size, tf.float32)
-
             state_fw = initial_state_fw
             for timestep in range(self.timestep_size):
                 #if timestep > 0:
@@ -571,31 +594,41 @@ class Bilstm_Att(object):
                 outputs_fw.append(output_fw)
             outputs_bw = []
             state_bw = initial_state_bw
-
             # with tf.variable_scope('bw', reuse=True) as bw:
             #tf.get_variable_scope().reuse_variables()
             float_inputs = tf.reverse(float_inputs, [1])
-
             for timestep in range(self.timestep_size):
                 #if timestep > 0:
                 #    tf.get_variable_scope().reuse_variables()
                 (output_bw, state_bw) = cell_bw(float_inputs[:, timestep, :], state_bw)
                 outputs_bw.append(output_bw)
             outputs_bw = tf.reverse(outputs_bw, [0])
+            #pdb.set_trace()
             output = tf.concat([outputs_fw, outputs_bw], 2)
+            print(output)
+            #pdb.set_trace()
             output_trans = tf.transpose(output, perm=[1,0,2])
+            #pdb.set_trace()
             self.bilstm_output = tf.reshape(output_trans, [-1, self.hidden_size*2])
+            #pdb.set_trace()
             _print("\n bi_lstm output shape ", self.bilstm_output.shape)
-            bilstm_y_pred = self.init_full_conn_layer(self. bilstm_output, self.hidden_size*2, self.class_num)
+            #pdb.set_trace()
+            bilstm_y_pred = self.init_full_conn_layer(self.bilstm_output, self.hidden_size*2, self.class_num)
+            #pdb.set_trace()
             return bilstm_y_pred
             #return self.output # [-1, self.hidden_size*2]
-     
+
     def init_multi_layer(self,inp,shape0,shape1,dtype=tf.float32):
         softmax_w = self.weight_variable([shape0, shape1])
         softmax_b = self.bias_variable([shape1])
-        outp= tf.multiply(inp, softmax_w) + softmax_b
+        outp= tf.multiply(tf.cast(inp,tf.float32), softmax_w) + softmax_b
         return tf.cast(outp,dtype)
-     
+
+    def matmul(self,inp1,inp2,shape1,dtype=tf.float32):
+        softmax_b = self.bias_variable([shape1])
+        outp= tf.matmul(inp1, inp2) + softmax_b
+        return tf.cast(outp,dtype)
+
     def init_full_conn_layer(self,inp,shape0,shape1,dtype=tf.float32):
         softmax_w = self.weight_variable([shape0, shape1])
         softmax_b = self.bias_variable([shape1])
@@ -606,30 +639,37 @@ class Bilstm_Att(object):
     def fscore(self, labels, logits): # y y_
         y = tf.cast(tf.reshape(labels, [-1]), tf.int32)
         y_ = tf.cast(tf.argmax(logits, 1), tf.int32)
+        # pdb.set_trace()
         ylbEqPred = tf.cast(tf.equal(y,y_),tf.int32)
         ylbEqZero = tf.cast(tf.equal(y,0),tf.int32)
         ylbGthZero = tf.cast(tf.greater(y,0),tf.int32)
         yPredEqZero = tf.cast(tf.equal(y_, 0),tf.int32)
         yPredGthZero = tf.cast(tf.greater(y_, 0),tf.int32)
         TP = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredGthZero,0*yPredGthZero),ylbGthZero, 0*yPredGthZero), tf.float32))
-        FP = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredGthZero,0),ylbEqZero,0*yPredGthZero), tf.float32)) 
+        FP = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredGthZero,0),ylbEqZero,0*yPredGthZero), tf.float32))
         TN = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredEqZero,0),ylbEqZero, 0*yPredEqZero), tf.float32))
-        FN = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredEqZero,0),ylbGthZero,0*yPredGthZero), tf.float32)) 
-        Precision = tf.divide(TP, tf.add(tf.add(TP,FP),0.01))
-        Recall= tf.divide(TP, tf.add(tf.add(TP,FN),0.01))
+        FN = tf.reduce_sum(tf.cast(tf.where(tf.greater(yPredEqZero,0),ylbGthZero,0*yPredGthZero), tf.float32))
+        TP = tf.add(TP,1)
+        TN = tf.add(TN,1)
+        FP = tf.add(FP,1)
+        FN = tf.add(FN,1)
+        Precision = tf.divide(TP, tf.add(TP,FP))
+        Recall= tf.divide(TP, tf.add(TP,FN))
         Fscore = tf.divide(tf.multiply(Precision, Recall), tf.add(Precision, Recall))
         squareFscore = tf.multiply(Fscore, Fscore)
         threeMulFscore = tf.multiply(squareFscore, Fscore)
+        forMulFscore = tf.multiply(threeMulFscore, Fscore)
         #fourMulFscore = tf.multiply(threeMulFscore, Fscore) # if u wanna fscore more effection modify here
         """ this to make the fscore more important before close enought to zero """
-        floss= tf.divide(1, threeMulFscore)
+        floss= tf.divide(10, forMulFscore)
         return TP, FP, TN, FN, Precision, Recall, floss
-    
+
     def init_model_struct(self):
         #self.init_embedding()
         #self.bilstm_output = self.init_bi_lstm()
-        y_pred = self.init_bi_lstm(self.vocab_size, self.embedding_size, self.X_inputs)
-        mycost = self.init_attention(self.X_inputs, y_pred, self.vocab_size, self.btsize, self.timestep_size, self.embedding_size, self.class_num)
+        self.embedding = tf.Variable(tf.random_uniform([self.vocab_size,self. embedding_size], -1.0, 1.0))
+        self.y_pred = self.init_bi_lstm(self.vocab_size, self.embedding_size, self.X_inputs)
+        mycost = self.init_attention_qdk(self.X_inputs, self.y_pred, self.vocab_size, self.btsize, self.timestep_size, self.embedding_size, self.class_num)
         # adding extra statistics to monitor
         return mycost
         # self.y_inputs.shape = [self.batch_size, self.timestep_size]
@@ -647,7 +687,7 @@ class Bilstm_Att(object):
         assert shape_all%divide == 0
         return tf.reshape(inp, (shape_all//divide, divide))
 
-    def init_attention(self, X_inputs, y_pred, vocab_size, btsize, timestep_size, embedding_size, class_num):
+    def beta_init_attention(self, X_inputs, y_pred, vocab_size, btsize, timestep_size, embedding_size, class_num):
             #with tf.variable_scope('attentions'):
             #pdb.set_trace(
             #att_inputs = self.X_input
@@ -660,43 +700,96 @@ class Bilstm_Att(object):
             tvm = timestep_size*embedding_size # 200 * 256
             tnm = timestep_size*class_num      # 200 * 3
             divide = 10*embedding_size
+            divide = tvm
+
             ## ====== 对每个句子进行全连接运算DNN
             #mid = self.init_full_conn_layer(att_inputs,tvm, tvm*2,tf.float32)
-            
+
             # ====== cut sent to 10 words matrix
             att_inputs_div_ten = self.reshape(att_inputs, divide)
 
-            # ====== dnn for every 10 words 
-            mid = self.init_full_conn_layer(att_inputs_div_ten, divide, divide,tf.float32)
+            # ====== dnn for every 10 words
+            mid = self.init_full_conn_layer(att_inputs_div_ten, tnm, divide,tf.float32)
+            dnn_output_divide = self.reshape(mid, tnm)
 
-            # ====== 将维度缩小输出
-            dnn_output_divide = self.reshape(mid, tvm)
-            dnn_output= self.init_full_conn_layer(dnn_output_divide, tvm, tnm, tf.float32)
-            # dnn_output.shape == self.btsize, tnm
-
-            # ====== 将维度缩小输出 对前面的y_pred使用DNN处理
-            #y_pred_trans = tf.reshape(y_pred,[btsize, tnm])
-            divideClassNum = 10*class_num
+            divideClassNum = tnm
             y_pred_trans = self.reshape(y_pred, divideClassNum)
-            ## ====== 对每个句子进行全连接运算DNN
-            #y_pred_dnn = self.init_full_conn_layer(y_pred_trans,tnm,tnm,tf.float32)
-            rnn_output = self.init_full_conn_layer(y_pred_trans,divideClassNum, divideClassNum ,tf.float32)
-            # ====== 将rnn dnn 输出结果合并
-            sents_cnt = btsize # 32 sent 有多少个句子
-            sent_size = timestep_size*class_num # 200 words 3 predict 有多少个 词*词维度 
-            r = tf.reshape(rnn_output,[sents_cnt,sent_size])
-            d = tf.reshape(dnn_output,[sents_cnt,sent_size])
 
-            rd_tensor = tf.concat((r,d),1)#10,1200
-            double_sent_size = 2*sent_size#rd_tensor.shape[0]
+            self.attention = self.matmul(dnn_output_divide,y_pred_trans,tnm)
+            self.TP, self.FP, self.TN, self.FN ,self.Precision, self.Recall,self.Fscore = self.fscore(labels=self.y_inputs, logits=self.attention)
 
-            # ====== 将合并后的dnn再输出
-            #rnn_part = self.init_multi_layer(r,1,rdl,tf.float32)
-            #dnn_part = self.init_multi_layer(d,1,rdl,tf.float32)
-            att_sum = self.init_full_conn_layer(rd_tensor,2*sent_size,4*sent_size,tf.float32)
-            att_sum_out = self.init_full_conn_layer(att_sum,4*sent_size,sent_size,tf.float32)
-            #att_out= tf.add(rnn_part,dnn_part)
-            self.attention = tf.reshape(att_sum_out, (btsize*timestep_size, class_num))
+            self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
+            self.cost = tf.multiply(self.Fscore, self.loss)
+
+            correct_prediction = tf.equal(tf.cast(tf.argmax(self.attention, 1), tf.int32), tf.reshape(self.y_inputs, [-1]))
+            self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            return self.cost
+
+    def dct_att(self,kx5):
+        res = []
+        for kx1 in kx5:
+            res.extend([self.attdct[kx1]]*3)
+        return np.array(res).reshape[-1]
+
+    def dct_mod(self,kx5i, lbs):
+        tf.sum(lbs)
+
+    def init_attention_qdk(self, X_inputs, y_pred, vocab_size, btsize, timestep_size, embedding_size, class_num):
+            tvm = timestep_size*embedding_size # 200 * 256
+            tnm = timestep_size*class_num      # 200 * 3
+            divide = tnm
+            att_inputs = tf.cast(tf.reshape(tf.nn.embedding_lookup(self.embedding, X_inputs), [btsize, timestep_size*embedding_size]), tf.float32)
+            chatx5 = self.reshape(att_inputs, 5*128)
+            #chatx3 = self.reshape(att_inputs, 3*128)
+            #chatx7 = self.reshape(self.embedding,7*128)
+            #weightx3 = self.init_multi_layer(chatx3,1,3*128, dtype=tf.float32):
+            weightx5 = self.init_multi_layer(chatx5,1,5*128, dtype=tf.float32)
+
+            #weightx7 = self.init_multi_layer(chatx7,1,7*128, dtype=tf.float32)
+            #atte_res_1 = tf.multiply(self.reshape(weightx3, [-1]), self.reshape(y_pred,(3,1))) # (32*200*128, 3)
+            atte_res_1 = self.init_full_conn_layer(weightx5, 5*128, 15, dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_2 = self.init_full_conn_layer(weightx5, 7*128, 21, dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_2 = tf.multiply(tf.reshape(weightx3,[-1]), tf.reshape(y_pred,[6400*3, 1])) # (32*200*128, 3)
+            #atte_res_1 = tf.multiply(self.reshape(weightx3, [-1]), self.reshape(y_pred,(3,1))) # (32*200*128, 3)
+            #pdb.set_trace()
+            self.attention1 = tf.reshape(atte_res_1,(6400,3))
+            #self.attention2 = tf.reshape(atte_res_1,(6400,3))
+            self.pred_1= tf.multiply(self.attention1, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            #self.pred_2= tf.multiply(self.attention2, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            self.attention= self.pred_1 # (32*200*128, 3)
+            #self.attention= tf.reduce_sum(self.pred1, self.pred2) # (32*200*128, 3)
+
+            #self.attention2 = tf.reshape(tf.reduce_mean(atte_res_2, 1), (6400,3))
+
+            self.TP, self.FP, self.TN, self.FN ,self.Precision, self.Recall,self.Fscore = self.fscore(labels=self.y_inputs, logits=self.attention)
+
+            self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
+            self.cost = tf.multiply(self.Fscore, self.loss)
+
+            correct_prediction = tf.equal(tf.cast(tf.argmax(self.attention, 1), tf.int32), tf.reshape(self.y_inputs, [-1]))
+            self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            return self.cost
+
+    def init_attention(self, X_inputs, y_pred, vocab_size, btsize, timestep_size, embedding_size, class_num):
+            #with tf.variable_scope('attentions'):
+            #pdb.set_trace(
+            #att_inputs = self.X_input
+            #att_inputs = tf.reshape(tf.cast(self.X_inputs,tf.float32), (10, 200))
+            self.y_pred = y_pred
+            #embedding = tf.Variable(tf.random_uniform([vocab_size, embedding_size], -1.0, 1.0))
+            embedding = self.embedding
+
+            #inputs = tf.nn.embedding_lookup(embedding, X_inputs)
+            tvm = timestep_size*embedding_size # 200 * 256
+            tnm = timestep_size*class_num      # 200 * 3
+            divide = tnm
+
+            # ====== one sentence one tensor first reshape
+            attIn= self.reshape(self.y_pred, divide)
+            attOutput= self.init_full_conn_layer(attIn, divide, divide, tf.float32)
+
+            self.attention = self.reshape(attOutput, class_num)
+
             self.TP, self.FP, self.TN, self.FN ,self.Precision, self.Recall,self.Fscore = self.fscore(labels=self.y_inputs, logits=self.attention)
 
             self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
@@ -741,9 +834,9 @@ class Bilstm_Att(object):
         f0 = tf.cast(tf.zeros([2000,1]), tf.int32)
         f1 = tf.cast(tf.ones([2000,1]), tf.int32)
         f2 = tf.add(f1,f1)
-        ff0 = tf.cast(tf.equal(s,f0), tf.int32) 
-        ff1 = tf.cast(tf.equal(s,f1), tf.int32) 
-        ff2 = tf.cast(tf.equal(s,f2), tf.int32) 
+        ff0 = tf.cast(tf.equal(s,f0), tf.int32)
+        ff1 = tf.cast(tf.equal(s,f1), tf.int32)
+        ff2 = tf.cast(tf.equal(s,f2), tf.int32)
         #z = tf.cast(tf.reshape(tf.argmax(self.attention, 1), [-1]), tf.int32)
         loss0=tf.multiply(tf.cast(tf.reduce_sum(tf.multiply(tf.cast(correct_prediction,tf.int32),ff0)), tf.float32), 0.1)
         loss1=tf.multiply(tf.cast(tf.reduce_sum(tf.multiply(tf.cast(correct_prediction,tf.int32),ff1)), tf.float32), 5)
@@ -763,7 +856,7 @@ class Bilstm_Att(object):
         #print("c", c)
         #print("self.attention", self.attention)
         #tf.subtract(s,z)
-            
+
         #self.cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = c))
         #self.cost_ = tf.reduce_mean(tf.cast(tf.where(tf.greater(y, y_), (y-y_)*20, (y_-y)), tf.float32))
         #self.cost_base = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
@@ -891,7 +984,7 @@ class Bilstm_Att(object):
         #print(saver)
         sess.run(tf.global_variables_initializer())
         #test_fetches = [self.attention, self.accuracy, self.cost, self.train_op, self.y_pred]
-        train_fetches = [self.attention, self.accuracy, self.cost, self.train_op, self.Precision,self.Recall,self.Fscore, self.TP, self.FP, self.TN, self.FN]
+        train_fetches = [self.attention, self.accuracy, self.cost, self.train_op, self.Precision,self.Recall,self.Fscore, self.TP, self.FP, self.TN, self.FN, self.y_pred]
         #train_att_fetches = [self.att_layer.accuracy, self.att_layer.train_op, self.att_layer.predictions]
         #gen = self.datahelper.gen_train_data("train")
         for epoch in range(self.max_max_epoch):
@@ -904,10 +997,11 @@ class Bilstm_Att(object):
                 _print('EPOCH %d lr=%g' % (epoch+1, self._lr))
                 _acc = 0.0
                 X_batch, y_batch = self.batch_gen.__next__()
-                pass#pdb.set_trace()
-                feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:self._lr, self.batch_size:self.btsize, self.keep_prob:0.5}
-                res_att, res_acc, res_cost, res_op, res_precision, res_recall, res_fscore, res_tp, res_fp,res_tn,res_fn \
+                #pdb.set_trace()
+                feed_dict = {self.X_inputs:X_batch, self.y_inputs:y_batch, self.lr:1e-03, self.batch_size:32, self.keep_prob:0.5}
+                res_att, res_acc, res_cost, res_op, res_precision, res_recall, res_fscore, res_tp, res_fp,res_tn,res_fn,y_pred_bilstm \
                     = sess.run(train_fetches, feed_dict) # the self.cost is the mean self.cost of one batch
+
                 #att_feed_dict={self.att_layer.input_x:self.textcnn_data_transform(_att,5), self.att_layer.input_y:tf.reshape(tf.one_hot(y_batch,1),(1000,8)), self.att_layer.dropout_keep_prob:0.5 }
                 #_att_acc, _att_op, _att_pred, _ = sess.run(train_att_fetches, att_feed_dict) # the self.cost is the mean self.cost of one batch
                 #_print(dict(zip(["_att_acc", "_att_op", "_att_pred"],[ _att_acc, _att_op, _att_pred])))
@@ -953,6 +1047,9 @@ class Bilstm_Att(object):
                    save_path = saver.save(sess, self.model_save_path, global_step=(epoch+1))
                    _print('the save path is ', save_path)
                    _print('***************save ok ***************')
+                if batch%100==2 and batch>100:
+                   self.datahelper.dct.save("./model/myDctBak")
+                   _print("> my dct save ok")
 
     def fit_test(self):
         """
@@ -990,7 +1087,7 @@ class Bilstm_Att(object):
         print(_att_pred,_bilstm_pred, _att_acc, _bilstm_acc)
         return _att_pred,_bilstm_pred, _att_acc, _bilstm_acc
 
-    
+
 if __name__ == "__main__":
     _print("\n train.py")
     train_bilstm_ner_ins =  Train_Bilstm_Ner()

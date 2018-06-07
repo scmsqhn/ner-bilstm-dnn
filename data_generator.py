@@ -1,4 +1,4 @@
-#encoding=utf8
+#
 # to generate the fomular data 
 import data_helper
 from data_helper import *
@@ -14,11 +14,6 @@ tags = ['z','b','i','e','s','p','h','n','u','v','x','d','t','f','Q','q','k','c',
 # phone p h n
 # weixin u v x 
 # identifier d t f
-import test_request
-
-def load_data_from_api():
-    pass
-    test_request.post()
 
 def replaceNC(line):
     line = re.sub("[2-9]","3",line)

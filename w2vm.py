@@ -4,6 +4,7 @@ import gensim.models
 import pymongo
 import jieba
 import pdb
+
 def new_w2vm():
     sentences = []
     collections = pymongo.MongoClient("mongodb://127.0.0.1:27017")['myDB']['ner_addr_crim_sample']
@@ -13,6 +14,10 @@ def new_w2vm():
     collections = pymongo.MongoClient("mongodb://127.0.0.1:27017")['myDB']['original_data']
     for i in collections.find():
         words = list(jieba.cut(i['casdetail']))
+        sentences.append(words)
+    collections = pymongo.MongoClient("mongodb://127.0.0.1:27017")['myDB']['traindata']
+    for i in collections.find():
+        words = list(jieba.cut(str(i['text'])))
         sentences.append(words)
     print("\n>sentences len", len(sentences))
     pdb.set_trace()

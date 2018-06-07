@@ -135,7 +135,6 @@ print('Example of labels:', labels[0])
 
 # In[5]:
 
-
 df_data = pd.DataFrame({'words': datas, 'tags': labels}, index=list(range(len(datas))))
 #　句子长度
 df_data['sentence_len'] = df_data['words'].apply(lambda words: len(words))

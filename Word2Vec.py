@@ -19,32 +19,25 @@ import re
 import numpy as np
 from sklearn.manifold import TSNE
 import sys
-import os
-CURPATH = os.path.dirname(os.path.realpath(__file__))
-#import sys
-PARPATH = os.path.dirname(CURPATH)
-sys.path.append(PARPATH)
-sys.path.append(CURPATH)
-import dmp
-print(CURPATH, PARPATH)
-sys.path.append("home/distdev/dmp/gongan")
-sys.path.append("home/distdev/dmp/gongan")
-sys.path.append("/home/distdev")
-sys.path.append("/home/distdev/dmp/gongan/gz_case_address")
-sys.path.append("/home/distdev/dmp/gongan")
-sys.path.append("/home/distdev/dmp")
-sys.path.append("/home/distdev")
-sys.path.append("/home/distdev/dmp/gongan/gz_case_address")
-sys.path.append("/home/distdev/dmp/gongan/gz_case_address/model")
-import dmp
-from dmp import gongan as gongan
-from gongan import gz_case_address
-from gz_case_address import predict
-#import predict 
+sys.path.append("/home/siyuan/algor/src/iba")
+import dmp.gongan.ssc_dl_ner.data_utils
+import dmp.gongan.gz_case_address.predict
 import pymongo
 import traceback
 import pdb
 
+
+def initPath():
+  CURPATH = os.path.dirname(os.path.realpath(__file__))
+  PARPATH = os.path.dirname(CURPATH)
+  print(CURPATH)
+  print(PARPATH)
+  sys.path.append(PARPATH)
+  sys.path.append(CURPATH)
+
+#from bilstm import addr_classify
+#from bilstm import eval_bilstm
+sys.path.append("/home/distdev")
 mongo_client = pymongo.MongoClient("mongodb://127.0.0.1")
 myDB = mongo_client['myDB']
 coll = myDB['gz_gongan_alarm_1617']
@@ -321,10 +314,7 @@ class Addr_Classify(object):
         add_cls['reg'] = set()
         add_cls['crim'] = set()
         add_cls['text'] = sent
-        __ = re.sub("[^\u4e00-\u9fa50-9a-zA-Z@\.]","",sent)
-        add_cls['text'] = __
         lv, rg, cr = list(self.key_words_rule_reg_ext(sent))
-        #pdb.set_trace()
         """
         jiazhong beidao
         """
@@ -358,12 +348,8 @@ class Addr_Classify(object):
                _tt.append(i)
         tt = list(set(_tt))
         #addrs = tt#self.ext_with_ner_predict(sent)
-        addrs = []
-        try:
-            addrs = self.ext_with_ner_predict(sent)
-        except:
-            addrs = []
-        addrs = [re.sub("[^\u4e00-\u9fa5@\.0-9a-zA-Z]","",addr) for addr in addrs]
+        addrs = self.ext_with_ner_predict(sent)
+        addrs = [re.sub("[^\w\d]","",addr) for addr in addrs]
         add_cls['base'] = addrs
        # print("tt", tt, type(tt))
         if len(addrs)>0:
@@ -389,97 +375,42 @@ class Addr_Classify(object):
                            # print(_addr, "is in lv ", i)
                             add_cls['crim'].add(addr)
 
-        #with open("check.txt", "a+") as f:
-        #    f.write(str(add_cls))
-        #    f.write("\n")
-        for k in add_cls.keys():
-            if k =="text":
-                continue
-            add_cls[k] = list(add_cls[k])
-        # pdb.set_trace()
+        with open("check.txt", "a+") as f:
+            f.write(str(add_cls))
+            f.write("\n")
         return add_cls
 
-def pick_addr(ac, text):
-  try:
-    result = ac.run(text)
-    return result # dict
-  except:
-    traceback.print_exc()
-    return -1
-
-def update_one(dct,coll):
-  try:
-    coll.insert(dct)
-  except:
-    traceback.print_exc()
-
-def addr_cls():
-  ac = Addr_Classify(["北京天安门","富强文明"])
-  coll0 = myDB['traindata']
-  coll1 = myDB['original_data']
-  coll2 = myDB['gz_gongan_alarm_1617']
-  coll3 = myDB['gz_gongan_case']
-
-  for i in coll1.find():
-    try:
-      cont = i['casdetail']
-      res = pick_addr(ac,cont)
-      if res ==-1:
-          continue
-      print(res)
-      update_one(res, coll0)
-    except:
-      traceback.print_exc()
-      continue
-  """
-  for i in coll3.find():
-    try:
-      cont = i['jyaq']
-      res = pick_addr(ac,cont)
-      if res ==-1:
-        continue
-      update_one(res, coll0)
-    except:
-      traceback.print_exc()
-      continue
-  for i in coll2.find():
-    try:
-      cont = i['反馈内容']
-      res = pick_addr(ac,cont)
-      if res ==-1:
-        continue
-      update_one(res, coll0)
-    except:
-      traceback.print_exc()
-      continue
-  """
-
-def show():
-    #v= sys.argv[1]
-    #v = int(v)
-    #print(v)
-    #m = 1000
-    #v = 1000
-    #with open("/home/distdev/addr_classify/text_samples.txt", "r") as f:
-    #    text_samples = f.readlines()
-    #df = pd.read_csv("base_check.csv")
-    df = pd.read_csv("base_check.csv")#DataFrame()#columns=['predict_crim','predict_reg','predict_live','crim','live','reg','base','text','crim_rw','live_rw','reg_rw'])
-    text_ = df['text']
-    #text_ = text_samples#list(df['text'])
-    #text_ = list(df['text'])
+if __name__ == "__main__":
+    coll = pymongo.MongoClient("mongodb://127.0.0.1:27017")["myDB"]["original_data"]
+    pdb.set_trace()
+    text_ = []
+    for i in coll.find():
+        try:
+           cont = i['casdetail']
+           print(cont)
+           assert type(cont) == str
+           text_.append(cont)
+        except:
+           break
+           #continue
     ac = Addr_Classify(text_[:2])
     result_lst=  []
-    for i in range(len(text_)):
+    tcoll = pymongo.MongoClient("mongodb://127.0.0.1:27017")["myDB"]["traindata"]
+
+    for i in text_:
+        dct = {}
         #pdb.set_trace()
-       # print(text_[i])
-        result = ac.run(text_[i])
+        # print(text_[i])
+        result = ac.run(i)
         for j in result.keys():
            pass# print(j , result[j])
-        df.loc[i, 'predict_crim'] = str(result['crim'])
-        df.loc[i, 'predict_reg'] = str(result['reg'])
-        df.loc[i, 'predict_live'] = str(result['live'])
-        df.loc[i, 'text'] = str(result['text'])
-        df.loc[i, 'base'] = str(result['base'])
+
+        dct['crim'] = ",".join(result['crim'])
+        dct['text'] = cont
+        dct['live'] = ",".join(result['live'])
+        dct['reg'] = ",".join(result['reg'])
+        tcoll.insert(dct)
+        #tcoll.insert({"_id":i["_id"]},{"$set":dct})
         #pdb.set_trace()
 
     #df['crim_rw'] = False
@@ -493,7 +424,6 @@ def show():
     #df[df['live']!=df['predict_live']]['live_rw'] = False
     #per = len(df[(df['live_rw']==True) & (df['live_rw']==True) & (df['live_rw']==True)])/len(df)
     #print("right %s per"%(str(per)))
-    df.to_csv("~/addr_classify/my_check.csv", index=False)
+    #df.to_csv("~/addr_classify/my_check.csv", index=False)
 
-if __name__ == "__main__":
-    addr_cls()
+

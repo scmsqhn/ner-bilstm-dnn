@@ -2,8 +2,8 @@
 import pymongo
 import logging
 import sys
-sys.path.append("/home/distdev/src/iba/dmp/gongan")
-from bilstm import addr_classify
+sys.path.append("/home/distdev")
+#from bilstm import addr_classify
 #from bilstm import eval_bilstm
 import pdb
 #import arctic
@@ -32,7 +32,6 @@ import jieba.posseg as pseg
 #import tensorflow as tf
 #
 #from addr_classify import Addr_Classify
-
 import sys
 import const
 Const = const._const()
@@ -126,6 +125,7 @@ def _path(filepath):
     _print("\n> CURPATH IS ", CURPATH)
     return os.path.join(CURPATH, filepath)
 
+
 class Data_Helper(object):
 
     def __init__(self):
@@ -133,11 +133,13 @@ class Data_Helper(object):
         #assert self.arctic_inf_init() == Const.SUCC
         #self.mongo_inf_init("myDB", "gz_gongan_case")
         self.odd= True
+        #self.w2vm = bilstm.w2vm.load_w2vm()
         self.btsize=32
         self.mongo_inf_init("myDB", "gz_gongan_alarm_1617")
         self.w2vm = gensim.models.word2vec.Word2Vec.load("./model/w2vm")
+        #self.dct = gensim.corpora.Dictionary.load("./model/myDctBak")
         self.dct = gensim.corpora.Dictionary.load("./model/my.dct.bak")
-        self.ac =addr_classify.Addr_Classify(["2016年1月1日9时左右，报警人文群华在股市云岩区保利云山国际13栋1楼冬冬小区超市被撬门进入超市盗走现金1200元及一些食品等物品。技术科民警已经出现场勘查。"])
+        #self.ac =addr_classify.Addr_Classify(["2016年1月1日9时左右，报警人文群华在股市云岩区保利云山国际13栋1楼冬冬小区超市被撬门进入超市盗走现金1200元及一些食品等物品。技术科民警已经出现场勘查。"])
         self.train_data_generator = self.gen_train_data('train')
         self.eval_data_generator = self.gen_train_data("eval")
         #self.tags = {'x':0.0, 'o':1.0,'a':2.0,'r':3.0,'v':4.0,'d':5.0}
@@ -511,12 +513,12 @@ class Data_Helper(object):
     def gen_train_data(self, name="train"):
       g = ""
       if name == "train":
-          g = self.gen_train()
+          g = self.gen_train(begin_cursor=100, end_cursor=-1)
       elif name =="eval":
-          g = self.gen_train(begin_cursor=0,db='myDB',coll='traindata',textcol='text',targetcol='addrcrim',funcname='gen_train')
+          g = self.gen_train(db='myDB',coll='traindata',textcol='text',targetcol='addrcrim',funcname='gen_train',begin_cursor=0, end_cursor=100)
           #g = self.gen_eval(funcname="gen_eval",columns_name="text",columns_name_tar="addrcrim",db="myDB",coll="traindata",begin_cursor=0,end_cursor=100)
       elif name =="evalTaiyuan":
-          g = self.gen_eval(funcname="gen_eval",columns_name="casdetail",columns_name_tar="",db="myDB",coll="original_data",begin_cursor=0,end_cursor=100)
+          g = self.gen_eval(funcname="gen_eval",columns_name="casdetail",columns_name_tar="",db="myDB",coll="original_data",begin_cursor=0,end_cursor=100, wordFilter=False)
           #gen = datasrc.gen_eval(funcname="gen_eval",columns_name="text",columns_name_tar="addrcrim",db="myDB",coll="traindata", begin_cursor=0, end_cursor=100)
       else:
           pass
@@ -606,17 +608,33 @@ class Data_Helper(object):
         elif type(s)==tuple:
             return ",".join(list(s))
 
-    def fromdct(self,word):
+    def sentFromDct(self, sent):
+        ids = []
+        words = list(jieba.cut(sent))
+        for word in words:
+            _id = self.fromdct(word,True)
+            if _id == Const.DICT_LOST:
+                continue
+            ids.append(_id)
+        return ids
+
+    def fromdct(self,word,flag=True):
+        #assert flag == True
         try:
            res=self.dct.token2id[word]
            return res
         except KeyError:
-           print("%sis not in the dct"%word)
-           self.dct.add_documents([[word]])
-           res=self.dct.token2id[word]
-           return res
+           #continue
+           if flag == True:
+               res = Const.DICT_LOST
+               return res
+           else:
+               print("%sis not in the dct"%word)
+               self.dct.add_documents([[word]])
+               res=self.dct.token2id[word]
+               return res
 
-    def gen_eval(self,funcname="gen_eval",columns_name="casdetail",columns_name_tar="",db="myDB",coll="original_data",begin_cursor=0,end_cursor=300):
+    def gen_eval(self,funcname="gen_eval",columns_name="casdetail",columns_name_tar="",db="myDB",coll="original_data",begin_cursor=0,end_cursor=100, wordFilter=False):
             _ids,_tags,_words = [],[],[]
             _print("\n> gen_train_data new a Eval_Ner()")
             self.get_mongo_coll(db,coll)
@@ -639,7 +657,14 @@ class Data_Helper(object):
                         continue
                     _ids,_tags,_words=[],[],[]
                     for word in list(jieba.cut(desdetail_text)):
-                        _ids.append(self.fromdct(word))
+                        wd = ""
+                        if wordFilter == True:
+                            wd = self.fromdct(word)
+                            if wd == Const.DICT_LOST:
+                                continue
+                        else:
+                            wd = self.fromdct(word, False)
+                        _ids.append(wd)
                         _tags.append(0)
                         _words.append(word)
                     if len(_tags)>200:
@@ -660,14 +685,33 @@ class Data_Helper(object):
                 #if len(_tags)%(self.btsize*200)==0 and len(_tags)>2:
                 #    self.dct.save("./model/my.dct.bak")
 
-    def gen_train(self, begin_cursor=100,db='myDB',coll='traindata',textcol='text',targetcol='addrcrim',funcname='gen_train'):
+    def tuple2WordsTags(self, tuples, flag=False):
+        reswords = []
+        restags = []
+        dummy = self.fromdct(" ",flag)
+        for item in tuples:
+            word = item[0]
+            tag= item[1]
+            wordid = self.fromdct(word,flag)
+            if wordid == Const.DICT_LOST:
+                continue
+            reswords.append(wordid)
+            restags.append(self.tags[tag])
+        if len(reswords)<200:
+            l = 200 - len(reswords)
+            reswords.extend([dummy]*l)
+            restags.extend([0]*l)
+        return reswords[:200], restags[:200]
+
+    def gen_train(self, db='myDB',coll='traindata',textcol='text',targetcol='addrcrim',funcname='gen_train', wordFilter=False, begin_cursor=100, end_cursor=-1):
             _print("\n> gen_train_data new a Eval_Ner()")
             import  pdb
             pass#pdb.set_trace()
             self.get_mongo_coll(db,coll)
             _collections=self.mongo_col
-            count=_collections.count()-begin_cursor
-            end_cursor=count-begin_cursor
+            count=_collections.count()
+            if end_cursor==-1 or end_cursor>count:
+                end_cursor=count
             self._vali_equal(end_cursor,begin_cursor,">",'gen_train')#断言end_cursor>begin_cursor
             #ev = bilstm.eval_bilstm.Eval_Ner()
             #get_mongo_coll( 'myDB', "traindata")
@@ -677,6 +721,8 @@ class Data_Helper(object):
             print("\n>len ll after random: ",len(ll))
             print("\n>ll:",ll[:10])
             for c in ll:
+                if c<begin_cursor or c>end_cursor:
+                    continue
                 #print("\n> this is the num",c,'sentence')
                 self._vali_type(c,int,funcname)#断言c是int型数据格式
                 #===== 过滤掉字段不全的文本
@@ -727,15 +773,8 @@ class Data_Helper(object):
                 self._vali_type(result,str,'gen_train')
                 tuple_lst = list(re.findall("(.+?)/(.) ", result))
                 _print("\n>tuple_lst: ", tuple_lst)
-                _ids=[self.fromdct(j[0]) for j in tuple_lst]
-                _tags=[self.tags[j[1]] for j in tuple_lst]
-                if len(_tags)>200:
-                    _ids=_ids[:200]
-                    _tags=_tags[:200]
-                else:
-                    disl=200-len(_tags)
-                    _ids.extend([self.dct.token2id[" "]]*disl)
-                    _tags.extend([0]*disl)
+
+                _ids, _tags = self.tuple2WordsTags(tuple_lst, flag=False)
                 if Const.DEBUG=="True":
                     _print("gen_train data _ids _tags")
                     _print("_ids,_tags",_ids,_tags)
@@ -749,24 +788,49 @@ class Data_Helper(object):
     def read_file_2d_lst(self,dirpath,filename):
         f = open(os.path.join(dirpath,filename))
         cont = f.read()
-        lines = cont.split("\n")
-
-        y_lst = [line.split("\t")[0] for line in lines]
-        x_lst = [line.split("\t")[1] for line in lines]
+        lines = cont.split("[\n\r]")
+        print(lines[:3])
+        y_lst = []
+        x_lst = []
+        for line in lines:
+            try:
+                y_lst = line.split("\t")[0]
+                x_lst = line.split("\t")[1]
+            except:
+                continue
         clr_lines = [self.dwc(line) for line in x_lst]
         cuts_words = [jieba.cut(line) for line in clr_lines]
-        self._vali_equal(len(lines), len(cuts_words), "==")
+        #self._vali_equal(len(lines), len(cuts_words), "==")
+        #pdb.set_trace()
         return cuts_words, y_lst
+
+    def word_2_vec(self,word):
+        try:
+            return self.w2vm.get(word)
+        except:
+            return np.array([-1]*128)
+
+    def words_2_vecs(self,words):
+        self._vali_type(words, list)
+        while(1):
+            for word in words:
+                ids.append(self.word_2_vec(word))
+            self._vali_equal(len(ids),len(words),"==","words_2_ids")
+        return ids
 
     def words_2_ids(self,words):
         self._vali_type(words, list)
         while(1):
             try:
-                ids = [self.dct.token2id[word] for word in words]
+                for word in words:
+                    try:
+                        ids.append(self.dct.token2id[word])
+                    except:
+                        ids.append(self.dct.token2id[" "])
                 self._vali_equal(len(ids),len(words),"==","words_2_ids")
                 return ids
             except KeyError:
-                self.dct.add_documents([words])
+                #self.dct.add_documents([words])
                 continue
 
     def get_lb(self):
@@ -781,8 +845,7 @@ class Data_Helper(object):
             n2c[i]=j
         return c2n,n2c
             
-
-    def gen_train_text_classify_from_text(self, begin_cursor=100,dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data',filename='train.txt.bak',textcol='text',targetcol='addrcrim',funcname='gen_train_text_classify_from_text'):
+    def dataGenTrain(self, begin_cursor=100,dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data',filename='train.txt.bak',textcol='text',targetcol='addrcrim',funcname='gen_train_text_classify_from_text'):
             res = []
             c2n,n2c=self.get_lb()
             _print('this is the func gen_train_text_classify_from_text')
@@ -805,16 +868,18 @@ class Data_Helper(object):
                 _words_id = words_2_ids(sent)
                 tag = y_inputs[c]
                 _tag_id = c2n[tag]
-                yield _words_id,_tag_id,words2dlst[c],tag
+                yield _words_id,_tag_id,words2dlst[c],tag # 
 
     def toArr(self,lst,x,y):
         #import pdb
         pass#pdb.set_trace()
-        self._vali_date_lenth(lst,x*y,"toArr()")
+        #self._vali_date_lenth(lst,x*y,"toArr()")
+        if len(lst)==0:
+            return []
         return np.array(lst).reshape(x,y)
  
  
-    def next_batch_text_classify_train(self,gen):
+    def batch_iter(self,gen):
         i=0
         _ids,_tags,_words,_lbs=[],[],[],[]
         while(1):
@@ -829,20 +894,25 @@ class Data_Helper(object):
             i+=1
             print("\n>counter:",i)
             if i==self.btsize:
-                yield self.toArr(_ids,self.btsize,200), self.toArr(np.one_hot(_tags),self.btsize,18), self.toArr(_words,self.btsize,200), self.toArr(_lbs,self.btsize,1)
+                yield self.toArr(_ids,self.btsize,200), self.toArr(np.one_hot(_tags),self.btsize,18)
+                #yield self.toArr(_ids,self.btsize,200), self.toArr(np.one_hot(_tags),self.btsize,18), self.toArr(_words,self.btsize,200), self.toArr(_lbs,self.btsize,1)
                 _ids,_tags,_words,_lbs=[],[],[],[]
                 i=0
-            #import pdb
-            pass#pdb.set_trace()
 
     def next_batch_eval(self,gen):
         i=0
         _ids,_tags,_words=[],[],[]
         while(1):
-            _id,_tag,_word=gen.__next__()
-            _ids.extend(_id)
-            _tags.extend(_tag)
-            _words.extend(_word)
+            res=gen.__next__()
+            if len(res) == 3:
+                _id,_tag,_word = res[0],res[1],res[2]
+                _ids.extend(_id)
+                _tags.extend(_tag)
+                _words.extend(_word)
+            else:
+                _id,_tag = res[0],res[1]
+                _ids.extend(_id)
+                _tags.extend(_tag)
             i+=1
             print("\n>counter:",i)
             if i==self.btsize:
@@ -862,23 +932,24 @@ class Data_Helper(object):
             _print("next_batch round_cnt", round_cnt)
             try:
                 import pdb
-                pass#pdb.set_trace()
                 a,b = _gen.__next__()
                 _print("\n> a,b the _gen.next() batch")
                 _print(a,b)
                 #_gen = self.gen_train_data(per=0.8, name=flag)
+                #pdb.set_trace()
                 assert len(a) == len(b)
                 _ids.append(a)
                 _tags.append(b)
                 assert len(_ids) == len(_tags)
                 round_cnt+=1
-                if round_cnt%self.btsize==0:
+                if len(_ids)%self.btsize == 0 and len(_ids)>1:
                     if Const.DEBUG=="True":
                         import pdb
                         print("next_batch")
                         pass#pdb.set_trace()
                     pass#pdb.set_trace()
                     yield np.array(_ids).reshape(self.btsize,200), np.array(_tags).reshape(self.btsize,200)
+                    round_cnt=0
                     _ids,_tags = [],[]
             except StopIteration:
                 pass#pdb.set_trace()

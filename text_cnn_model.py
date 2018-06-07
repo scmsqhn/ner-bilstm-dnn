@@ -26,7 +26,8 @@ class TextCNN(object):
         self.input_x = input_x#tf.placeholder(tf.int32, [None, sequence_length], name="input_x")#x输入的是n个句子
         self.input_y = input_y#tf.placeholder(tf.int32, [None, num_classes], name="input_y")#y输入的是每个句子的分类
         self.dropout_keep_prob = prob#btf.placeholder(tf.float32, name="dropout_keep_prob")
-        #pdb.set_trace()
+        print("input_x",input_x.shape)
+        print("input_y",input_y.shape)
 
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)
@@ -39,6 +40,9 @@ class TextCNN(object):
                 name="W_emb")
             self.embedded_chars = tf.nn.embedding_lookup(self.W_emb, tf.cast(self.input_x,tf.int32))
             self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)#增加一个维度
+            print("embedded_chars",self.embedded_chars)
+            print("embedded_chars_expand",self.embedded_chars_expanded)
+            pdb.set_trace()
 
         # Create a convolution + maxpool layer for each filter size
         pooled_outputs = []
@@ -81,22 +85,29 @@ class TextCNN(object):
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
-            pdb.set_trace()
-            print(self.h_drop.shape)
+            from_ = self.h_drop.shape
             self.scores = tf.nn.xw_plus_b(self.h_drop, W, b, name="scores")
+            to_ = (self.scores)
+            print(from_, "to", to_)
+            print(self.scores.shape)
+            #self.scores = tf.nn.xw_plus_b(self.h_drop, W, b, name="scores")
+            #print(self.scores)
             """
             before :self.predictions is softmax
             after predictions output scores direct with no classify
             """
             self.predictions = tf.argmax(self.scores, 1, name="predictions")
+            print(self.predictions.shape)
+            pdb.set_trace()
             #self.predictions = self.scores
             print("\n> self.scores.shape:", self.scores.shape)
             print("\n> self.predictions.shape:", self.predictions.shape)
+            pdb.set_trace()
 
         # Calculate mean cross-entropy loss
         with tf.name_scope("att-loss"):
             #losses = tf.nn.softmax_cross_entropy_with_logits(logits=self.scores, labels=self.input_y)
-            losses = tf.nn.softmax_cross_entropy_with_logits(logits=tf.cast(self.predictions,tf.float64), labels=tf.cast(tf.reshape(self.input_y,[-1]),tf.float64))
+            losses = tf.nn.softmax_cross_entropy_with_logits(logits=tf.cast(self.scores,tf.float64), labels=tf.cast(tf.reshape(self.input_y,[-1]),tf.float64))
             self.loss = tf.reduce_mean(losses) + l2_reg_lambda * l2_loss
 
         # Accuracy
