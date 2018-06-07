@@ -1,6 +1,8 @@
 #!/bin/bash
 
-import subprocess as commands
+import ConfigParser
+import optparse
+import subprocess as cmd
 import os
 import sys
 import re
@@ -21,7 +23,7 @@ THISSPACENUM = 0
 #NEXTSPACENUM = 0
 
 def run(cmd):# run a command
-    output = commands.Popen(cmd)  
+    output = cmd.Popen(cmd)  
     return status, output
 
 def initPath(): # init curpath and parpath
@@ -123,7 +125,7 @@ def headWith(inp):
 
 def formatLine(line):
     #line = re.sub("^ *","",line)
-    line = re.sub("\t","    ",line)
+    line = re.sub("    ","    ",line)
     if line == "":
         return line
     line = headWith(line)
@@ -138,7 +140,7 @@ def formatCode(readFileName, removeNote=True):
     _writeFile= buildPath(readFileName +".format")
     #cmd = "touch %s"% writeFile
     #print("cmd: ",cmd)
-    #output = commands.Popen(cmd)
+    #output = cmd.Popen(cmd)
     #print(output)
     write_file = open(_writeFile, "a+")
     cont = readFile(_readFile)
@@ -160,7 +162,48 @@ def formatCode(readFileName, removeNote=True):
         print(line)
     print(readFileName, "is now write into",readFileName,".format")
 
-if __name__ == "__main__":
-    initPath()
+def gitUpload():
+
+
+    if __name__ == "__main__":
+        initPath()
     formatCode("text_cnn_model.py")
+
+def getConfig(ini):
+    try:
+        cfg = ConfigParser.ConfigParser()
+        cfg.readfp(open(ini))
+        print(cfg.sections())
+    except:
+        pass
+
+if __name__=='__main__':
+    parser = optparse.OptionParser()
+
+    parser.add_option(
+        "-i",
+        "--ini",
+        dest="ini",
+        default="config.ini",
+        help="read config from INI file",
+        metavar="INI"
+        )
+    parser.add_option(
+        "-f",
+        "--file",
+        dest="filename",
+        help="write report to FILE",
+        metavar="FILE"
+        )
+    parser.add_option(
+        "-q",
+        "--quiet",
+        dest="verbose",
+        action="store_false",
+        default=True,
+        help="don't print status messages to stdout"
+        )
+    (options, args) = parser.parse_args()
+    getConfig(options.ini)
+    print(args)
 
