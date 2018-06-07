@@ -23,7 +23,7 @@ import sys
 sys.path.append("/home/siyuan/svn/algor/src/iba/dmp/gongan/storm_crim_classify/extcode")
 sys.path.append("/home/siyuan/svn/algor/src/iba/dmp/gongan/storm_crim_classify/extcode")
 import traceback
-#import digital_info_extract as dex
+import digital_info_extract as dex
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -36,7 +36,7 @@ import jieba
 import collections
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-#rd = dex.RegDict()
+rd = dex.RegDict()
 ##print(rd)
 DEBUG =True
 DATA = True
@@ -90,7 +90,7 @@ def split_by_num_eng(lines):
 #print(result)
 #silhouette_avg, sample_silhouette_values, X, y, lines = clstxt.classifier_doc("./target_doc4classifier.txt", k=20)
 #log("完成聚类实现对数字英文的分类")
-#import digital_info_extract as digiext
+import digital_info_extract as digiext
 """
 if DATA:
     train_data, eval_data = clstxt.prepare_train_eval()
@@ -131,7 +131,6 @@ if DATA:
 
     log("获得规则提取结果 wx ")
 """
-
 def marker_eve_char(f, wx, word):
     _l = len(word)
     if _l == 1:
@@ -141,34 +140,34 @@ def marker_eve_char(f, wx, word):
             f.write("\r")
     elif _l == 2:
         if wx == False:
-            f.write("%s/o "%word[0])
-            f.write("%s/o "%word[1])
+            f.write("%s/b "%word[0])
+            f.write("%s/e "%word[1])
         else:
             word = replaceNC(word)
-            f.write("%s/o "%word[0])
-            f.write("%s/o "%word[1])
+            f.write("%s/w "%word[0])
+            f.write("%s/n "%word[1])
     else:
         if wx == False:
             ct = 0
-            f.write("%s/o "%word[ct])
+            f.write("%s/b "%word[ct])
             while(1):
                 ct+=1
                 if _l>ct+1:
-                    f.write("%s/o "%word[ct])
+                    f.write("%s/m "%word[ct])
                     continue
                 break
-            f.write("%s/o "%word[ct])
+            f.write("%s/e "%word[ct])
         else:
             word = replaceNC(word)
             ct = 0
-            f.write("%s/b "%word[ct])
+            f.write("%s/w "%word[ct])
             while(1):
                 ct+=1
                 if _l>ct+1:
                     f.write("%s/i "%word[ct])
                     continue
                 break
-            f.write("%s/i "%word[ct])
+            f.write("%s/n "%word[ct])
 
 
 def data_prepare(filename, texts):
@@ -455,7 +454,7 @@ with open("tagtext_rep.txt","w+") as f:
 #    sentences = f.read()
 #print(sentences)
 
-if False:
+if True:
   with open("wxLst.json", "r") as w:
     wx_word = json.loads(w.read())
 
@@ -484,52 +483,25 @@ def clean_base(s):
         return s
 
 # 重新以换行符来划分
-#sentences = re.split('[，。！？、‘’“”]/[bems]', texts)
-import sklearn.utils
-from sklearn.utils import shuffle
-import data_helper
-import config
-
-if False:
-    cont = data_helper.readtxt(config.TRAIN_FILE)
-    cont = data_helper.formula_text(cont)
-    lines = cont.split("\n")
-
-    with open("/home/siyuan/data/beijing_phong_ext_train.txt","a+") as f:
-        for line in lines:
-            f.write(line)
-            f.write("\n")
-
-def mark_the_phonenum(filename, texts):
-    with open(filename, "a+") as f:
-         for word in jieba.cut(texts,HMM=True):
-             log("找到wx_word")
-             if word == "33333333333":
-                 marker_eve_char(f, True, word)
-             else:
-                 marker_eve_char(f, False, word)
-
-if False:
-    with open("/home/siyuan/data/beijing_phong_ext_train.txt","r") as f:
-        texts = f.read()
-        #sentences = re.split('[\r\n]', texts)
-        mark_the_phonenum("/home/siyuan/data/beijing_phong_ext_train_marked.txt", texts)
-
-with open("/home/siyuan/data/beijing_phong_ext_train_marked.txt","r") as f:
+with open("train_cut.txt","r") as f:
     texts = f.read()
-    sentences = re.split('[\r\n]', texts)
-    sep = int(len(sentences)*0.9)
+#sentences = re.split('[，。！？、‘’“”]/[bems]', texts)
+sentences = re.split('[\r\n]', texts)
 
-    train_sentences = shuffle(sentences)[:sep]
-    sentences_eval = shuffle(sentences)[sep:]
 
-sentences = train_sentences
+with open("train_cut_evalu.txt","r") as f:
+    texts_eval = f.read()
+#sentences = re.split('[，。！？、‘’“”]/[bems]', texts)
+sentences_eval = re.split('[\r\n]', texts_eval)
+
 print('Sentences number:', len(sentences))
 log('Sentences number:')
 log(len(sentences))
 print('Sentence Example:\n', sentences[:3])
 log('Sentence Example')
 log(sentences[:3])
+
+# In[4]:
 
 def get_Xy(sentence):
     """将 sentence 处理成 [word1, w2, ..wn], [tag1, t2, ...tn]"""
@@ -575,8 +547,8 @@ for sentence in tqdm(iter(sentences_eval)):
 
 
 print('Length of datas is %d' % len(datas)) 
-print('Example of datas: ', datas)
-print('Example of labels:', labels)
+print('Example of datas: ', datas[0])
+print('Example of labels:', labels[0])
 
 
 df_data = pd.DataFrame({'words': datas, 'tags': labels}, index=list(range(len(datas))))
@@ -605,7 +577,7 @@ sr_allwords = pd.Series(all_words)
 sr_allwords = sr_allwords.value_counts()
 set_words = sr_allwords.index
 set_ids = list(range(1, len(set_words)+1)) # 注意从1开始，因为我们准备把0作为填充值
-tags = ['b','i','o']
+tags = ['w','i','n','s','b','m','e']
 tag_ids = list(range(len(tags)))
 print("> tag_ids")
 print(tag_ids)
@@ -967,7 +939,7 @@ def test_epoch(dataset):
 sess.run(tf.global_variables_initializer())
 tr_batch_size = 64 
 #max_max_epoch = 6
-display_num = 10  # 每个 epoch 显示是个结果
+display_num = 2  # 每个 epoch 显示是个结果
 print("> data_train", data_train)
 log("data_train.y.shape tr_batch_size")
 log(data_train.y.shape)
@@ -982,13 +954,13 @@ for epoch in range(max_max_epoch):
     _lr = 1e-4
     if epoch > max_epoch:
         _lr = _lr * ((decay) ** (epoch - max_epoch))
-    #print('EPOCH %d， lr=%g' % (epoch+1, _lr))
+    print('EPOCH %d， lr=%g' % (epoch+1, _lr))
     start_time = time.time()
     _costs = 0.0
     _accs = 0.0
     show_accs = 0.0
     show_costs = 0.0
-    #print("y_inputs:y_batch")
+    print("y_inputs:y_batch")
     for batch in range(tr_batch_num): 
         fetches = [accuracy, cost, train_op]
         X_batch, y_batch = data_train.next_batch(tr_batch_size)
@@ -999,8 +971,8 @@ for epoch in range(max_max_epoch):
         _costs += _cost
         show_accs += _acc
         show_costs += _cost
-        #print(display_batch)
-        #print(batch)
+        print(display_batch)
+        print(batch)
         if (batch + 1) % display_batch == 0:
             valid_acc, valid_cost = test_epoch(data_valid)  # valid
             print('\ttraining acc=%g, cost=%g;  valid acc= %g, cost=%g ' % (show_accs / display_batch,
@@ -1059,19 +1031,28 @@ print('y_tt = ', y_tt)
 # A统计状态转移的频数
 
 def zy_mat():
-    # ['b', 'i', 'o']
     A = {
-      'bi':1e-9,
-      'bo':1e-9,
-      'bb':1e-9,
-
+      'sb':1e-9,
+      'ss':1e-9,
+      'sw':1e-9,
+      'sn':1e-9,
+      'si':1e-9,
+      'be':1e-9,
+      'bm':1e-9,
+      'me':1e-9,
+      'mm':1e-9,
+      'eb':1e-9,
+      'ee':1e-9,
+      'es':1e-9,
+      'ew':1e-9,
+      'wi':1e-9,
+      'wn':1e-9,
       'ii':1e-9,
-      'io':1e-9,
       'ib':1e-9,
-
-      'oi':1e-9,
-      'oo':1e-9,
-      'ob':1e-9,
+      'in':1e-9,
+      'ns':1e-9,
+      'nb':1e-9,
+      'nw':1e-9
      }
 
     # zy 表示转移概率矩阵
@@ -1086,19 +1067,33 @@ def zy_mat():
     log("生成A")
     log(A)
 
-    zy['bb'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
-    zy['bi'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
-    zy['bo'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
+    zy['sb'] = A['sb'] / (A['sb'] + A['ss'] + A['sw'] + A['si'] + A['sn'] +1e-9)
+    zy['ss'] = A['ss'] / (A['sb'] + A['ss'] + A['sw'] + A['si'] + A['sn'] +1e-9)
+    zy['si'] = A['si'] / (A['sb'] + A['ss'] + A['sw'] + A['si'] + A['sn'] +1e-9)
+    zy['sn'] = A['sn'] / (A['sb'] + A['ss'] + A['sw'] + A['si'] + A['sn'] +1e-9)
+    zy['sw'] = A['sw'] / (A['sb'] + A['ss'] + A['sw'] + A['si'] + A['sn'] +1e-9)
 
+    zy['be'] = A['be'] / (A['be'] + A['bm'] +1e-9)
+    zy['bm'] = A['bm'] / (A['be'] + A['bm'] +1e-9)
 
-    zy['ib'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
-    zy['ii'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
-    zy['io'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
+    zy['me'] = A['me'] / (A['me'] + A['mm'] + 1e-9)
+    zy['mm'] = A['mm'] / (A['me'] + A['mm'] + 1e-9)
 
+    zy['eb'] = A['eb'] / (A['eb'] + A['ew'] + A['es'] +A['ee'] + 1e-9)
+    zy['es'] = A['es'] / (A['eb'] + A['es'] + A['ew'] +A['ee'] + 1e-9)
+    zy['ew'] = A['ew'] / (A['eb'] + A['es'] + A['ew'] +A['ee'] + 1e-9)
+    zy['ee'] = A['ew'] / (A['eb'] + A['es'] + A['ew'] +A['ee'] + 1e-9)
 
-    zy['ob'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
-    zy['oi'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
-    zy['oo'] = A['bb'] / (A['bb'] + A['bi'] + A['bo'] + 1e-9)
+    zy['wi'] = A['wi'] / (A['wi'] + A['wn'] +1e-9)
+    zy['wn'] = A['wn'] / (A['wi'] + A['wn'] +1e-9)
+
+    zy['ii'] = A['ii'] / (A['ii'] + A['in'] + A['ib'] + 1e-9)
+    zy['ib'] = A['ib'] / (A['ii'] + A['in'] + A['ib'] + 1e-9)
+    zy['in'] = A['in'] / (A['ii'] + A['in'] + A['ib'] + 1e-9)
+
+    zy['ns'] = A['ns'] / (A['ns'] + A['nb'] + A['nw'] + 1e-9)
+    zy['nw'] = A['nw'] / (A['ns'] + A['nb'] + A['nw'] + 1e-9)
+    zy['nb'] = A['nb'] / (A['ns'] + A['nb'] + A['nw'] + 1e-9)
 
     keys = sorted(zy.keys())
     print('the transition probability: ')
@@ -1107,7 +1102,6 @@ def zy_mat():
     
     zy = {i:np.log(zy[i]) for i in list(zy.keys())}
     return zy
-
 zy = zy_mat()
 
 def viterbi(nodes):
@@ -1192,18 +1186,18 @@ def simple_cut(text):
         log("_y_pred")
         log(_y_pred)
         #nodes = [dict(list(zip(['x', 'w','i','n','s','b','m','e'], each))) for each in _y_pred]
-        nodes = [dict(list(zip(['b','i','o'], each))) for each in _y_pred]
+        nodes = [dict(list(zip(['w','i','n','s','b','m','e'], each))) for each in _y_pred]
         print("> 使用模型训练，找出节点:", nodes)
         log("nodes 模型训练出的节点")
         log(nodes)
         #pd.DataFrame([list(len(text)), list(text),])
-        #tags = viterbi(nodes)
-        #log("原文内容")
-        #log(text)
-        #log("输出概率")
-        #log(nodes)
-        #log("预测内容")
-        #log(tags)
+        tags = viterbi(nodes)
+        log("原文内容")
+        log(text)
+        log("输出概率")
+        log(nodes)
+        log("预测内容")
+        log(tags)
         return tags
         """
         words = []
@@ -1265,7 +1259,7 @@ with open("/home/siyuan/data/beijing110_cp.txt", "r") as f:
         evalueate(clear_marker(cont))
         cnt-=1
 """
-def wx_data_init():
+def data_init():
     #clstxt.prepare_train_eval()
     with open("~/gensim_word2vec/train", "r") as f:
         train = f.readlines()
@@ -1285,13 +1279,6 @@ def wx_data_init():
     for j in js_evalu:
         data_prepare("evalu_wx" ,js_evalu[i]['content'])
 
-def phone_data_init():
-    #clstxt.prepare_train_eval()
-    with open("/home/siyuan/data/beijing110_cont.txt", "r") as f:
-        cont = f.read()
-    formula_cont = data_helper.formula_text(cont)
-    mark_the_phonenum("/home/siyuan/data/beijing_phong_ext_train.txt", formula_cont)
-
 
 """""
 if __name__ == "__main__"():
@@ -1302,6 +1289,8 @@ if __name__ == "__main__"():
     train()
     evaluate()
 """    
+
+
 
 """
 

@@ -1,32 +1,68 @@
-# 使用 bilstm和dnn进行命名实体提取
+**[This code belongs to the "Implementing a CNN for Text Classification in Tensorflow" blog post.](http://www.wildml.com/2015/12/implementing-a-cnn-for-text-classification-in-tensorflow/)**
 
-# 测试结果 使用5000样本进行地址提取训练，准确率90+
+It is slightly simplified implementation of Kim's [Convolutional Neural Networks for Sentence Classification](http://arxiv.org/abs/1408.5882) paper in Tensorflow.
+
+## Requirements
+
+- Python 3
+- Tensorflow > 0.12
+- Numpy
+
+## Training
+
+Print parameters:
+
+```bash
+./train.py --help
+```
+
+```
+optional arguments:
+  -h, --help            show this help message and exit
+  --embedding_dim EMBEDDING_DIM
+                        Dimensionality of character embedding (default: 128)
+  --filter_sizes FILTER_SIZES
+                        Comma-separated filter sizes (default: '3,4,5')
+  --num_filters NUM_FILTERS
+                        Number of filters per filter size (default: 128)
+  --l2_reg_lambda L2_REG_LAMBDA
+                        L2 regularizaion lambda (default: 0.0)
+  --dropout_keep_prob DROPOUT_KEEP_PROB
+                        Dropout keep probability (default: 0.5)
+  --batch_size BATCH_SIZE
+                        Batch Size (default: 64)
+  --num_epochs NUM_EPOCHS
+                        Number of training epochs (default: 100)
+  --evaluate_every EVALUATE_EVERY
+                        Evaluate model on dev set after this many steps
+                        (default: 100)
+  --checkpoint_every CHECKPOINT_EVERY
+                        Save model after this many steps (default: 100)
+  --allow_soft_placement ALLOW_SOFT_PLACEMENT
+                        Allow device soft device placement
+  --noallow_soft_placement
+  --log_device_placement LOG_DEVICE_PLACEMENT
+                        Log placement of ops on devices
+  --nolog_device_placement
+
+```
+
+Train:
+
+```bash
+./train.py
+```
+
+## Evaluating
+
+```bash
+./eval.py --eval_train --checkpoint_dir="./runs/1459637919/checkpoints/"
+```
+
+Replace the checkpoint dir with the output from the training. To use your own data, change the `eval.py` script to load your data.
 
 
+## References
 
-# 要点
-１　使用专业词库在训练前进行分词,比较此前在模型后使用地址词库处理，效果有提升
-２　６０００（有效样本约３０００）贵州警察情训练数据在太原的预测值约６０％－７０％　毛估估
-３　增加样本和专业词库，再一次训练．
-４  逻辑部分正确较高
-５　３０００抽样２７３未能检出　错误在１０％-２０％
-
-# 错误分析
-４　未找出的中None占绝大部分，即模型从未录入该ｄｉｃｔＩＤ
-５　//太原本地名词，同上
-６　相对方位词，如房间内，外面，后面
-
-# 基本可以初步可以判断，词库＋神经网路可以覆盖所有的ＮＥＲ任务
-
-
-目的是将介词动词发现出来
-分词的词典尽可能长且完整
-同时,词典需要使用id 词向量会因为训练文本的偏置导致,神经网路模型的收敛更难
-
-256
-9 梯度 越大越容易跳过局部最有解 也容易不收敛 收敛慢
-学习率使用adm固定 1e-4
-使用自己优化动态
-
-
-DNN RNN dnn 
+- [Convolutional Neural Networks for Sentence Classification](http://arxiv.org/abs/1408.5882)
+- [A Sensitivity Analysis of (and Practitioners' Guide to) Convolutional Neural Networks for Sentence Classification](http://arxiv.org/abs/1510.03820)

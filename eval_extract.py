@@ -31,14 +31,10 @@ labels = list()
 datas_eval = list()
 labels_eval = list()
 
-with open("/home/siyuan/data/beijing_phong_ext_train_marked.txt","r") as f:
-    texts = f.read()
-    #sentences = re.split('[\r\n]', texts)
-    sentences_eval = re.split('[\r\n]', texts)
-    #sep = int(len(sentences)*0.9)
-    #
-    #train_sentences = shuffle(sentences)[:sep]
-    #sentences_eval = shuffle(sentences)[sep:]
+with open("train_cut_evalu.txt","r") as f:
+    texts_eval = f.readline()
+#sentences = re.split('[，。！？、‘’“”]/[bems]', texts)
+sentences_eval = re.split('[\r\n]', texts_eval)
 
 def get_Xy(sentence):
     """将 sentence 处理成 [word1, w2, ..wn], [tag1, t2, ...tn]"""
