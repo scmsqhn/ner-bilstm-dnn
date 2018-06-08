@@ -6,7 +6,7 @@ import sqlalchemy
 from sqlalchemy import create_engine
 import pymysql
 import datetime
-import pymysql  
+import pymysql
 import traceback
 import pandas as pd
 import xgboost as xgb
@@ -94,7 +94,7 @@ class Config_bond_risk(object):
 from isqhelpr import IsqHelper
 
 #------
-    
+
 def todayStr():
     return str(datetime.datetime.now()).split(" ")[0]
 
@@ -105,7 +105,7 @@ def todayShiftStr(num):
 
 def filter_data_by_time(bond_risk_, day):
     # ex: bond_risk_.execute("select * from middleTable where (to_days(%s) - to_days(date_input) <=180 and to_days(now()) - to_days(date)<=180);"%day)
-    # only match the middleTable; 
+    # only match the middleTable;
      data_180_ = bond_risk_.execute("select * from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(%s) - to_days(date)<=180);"%day)
      data_150_ = bond_risk_.execute("select * from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(%s) - to_days(date)<=150);"%day)
      data_120_ = bond_risk_.execute("select * from middleTable where (to_days(now()) - to_days(date_input) <=720 and to_days(%s) - to_days(date)<=120);"%day)
@@ -124,7 +124,7 @@ def cnt_label_day(bond_risk_, comp, label, date, n):
         #cursor = bond_risk_.find({"compname":comp, "label":label})
         for i in cursor:
             if datetime.datetime.now()-timeFormat(i['date'])<(date+n):
-                _cntLst.append(i[cnt])
+                _cntLst.append(i['cnt'])
         return  _cntLst
     except:
         #print(sql_)
@@ -154,7 +154,7 @@ def get_label_120(bond_risk_, comps, labels, n):
                     #print(b_)
                 dic_date[d]=b_
             dic_label[l] = dic_date
-        dic_com[c] = dic_label   
+        dic_com[c] = dic_label
         breakcnt+=1
         #if breakcnt>10:
         #    break
@@ -202,25 +202,25 @@ class TimeCnt():
         self.time_mark()
         #print(">耗时: ", (self.deque[-1]-self.deque[-2]).microseconds)
 
-def debug(func):  
-    def new_func(a, b):  
+def debug(func):
+    def new_func(a, b):
         #print("> ",func)
         try:
-            result = func(a, b)  
+            result = func(a, b)
             #print("> ",func, result)
         except:
             traceback.print_exc()
-    return new_func  
+    return new_func
 
-def time_cnt(func):  
-    def new_func(a, b):  
+def time_cnt(func):
+    def new_func(a, b):
         _TimeCnt = TimeCnt()
         #_TimeCnt.cnt_time()
-        result = func(a, b)  
+        result = func(a, b)
         _TimeCnt.cnt_time()
-        #print "result:", result, "used:", (end_tiem - start_time).microseconds, "μs"  
+        #print "result:", result, "used:", (end_tiem - start_time).microseconds, "μs"
         #return result
-    return new_func  
+    return new_func
 
 @time_cnt
 def prt(a):
@@ -286,14 +286,6 @@ def get_label_time_window(bond_risk_, from_, to_):
     #print(_labels, _compnames)
     return _labels, _compnames
 
-def pred_all(df):
-    collections.Counter(predict(bst, df.iloc[:1200][(True-df.iloc[:1200]['120'].isin([np.NaN]))], df.iloc[:,1]))
-
-#    try:
-#        update_every_day(model_labels_2, model_labels, model_columns_base)
-#    except:
-#        traceback.print_exc()
-#    prt("a","b")
 def main(n):
     _tc = TimeCnt()
     _tc.cnt_time()
@@ -343,7 +335,7 @@ def main(n):
     _columns = model_labels
     _columns_2 = model_labels_2
     #print("> ready to get data")
-    _cnt = 0 
+    _cnt = 0
     for i in _index:
         _cnt+=1
         if _cnt % 100 ==1:
@@ -357,7 +349,7 @@ def main(n):
         df_4_model.loc[i, "企业名称"] = i
         df_4_model.loc[i, "发布日期"] = datetime.datetime.now()
         df_4_model.loc[i, "credit_recent"] = 0
-        df_4_model.loc[i, "credit_ago"] = 0 
+        df_4_model.loc[i, "credit_ago"] = 0
         df_4_model.loc[i, "credit_trend"] = 0
 
         df_4_model.loc[i, "60"] = _panel[i].loc[60,:].sum()
@@ -431,7 +423,7 @@ def main(n):
 
 if __name__ == "__main__":
     pass
-    import  
+    from sqlhelper import  SqlHelper
     SqlHelper
     """
     for i in range(0, 30)[::-1]:

@@ -636,7 +636,7 @@ def load_all_data_from_mysql_db():
         db = "zhaiquanyujing",
         charset = 'utf8',
     cursor = conn.cursor()
-    cursor.execute('select * from middleTable;')
+    cursor.execute('select * from middleTable limit 10;')
 """
 
 def load_all_data_from_db():
@@ -696,9 +696,9 @@ if __name__ == "__main__":
     y_pred, df, compnames = main2()
     dd=dict(zip(compnames[:len(y_pred)],y_pred))
     dp = {}
-    for k in dd.keys():
+    for k in dd.keys()[:10]:
         dp[k] = float(dd[k]) / len(list(set(list(dd.values()))))
-    df=pd.DataFrame(list(dd.items()))
+        df=pd.DataFrame(list(dd.items())[:10])
     df.to_csv('y_pred.csv',index=False)
     bond_risk_ = SqlHelper(Config_bond_risk)
     for i in dp.keys():
