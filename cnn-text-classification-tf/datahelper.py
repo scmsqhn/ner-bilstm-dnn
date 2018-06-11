@@ -23,7 +23,8 @@ import re
 #import os
 import jieba
 import re
-jieba.load_userdict("./model/all_addr_dict.txt")                     #加载自定义词典
+dctpath = "/home/distdev/bilstm/model/all_addr_dict.txt"
+jieba.load_userdict(dctpath)
 import jieba.posseg as pseg
 #import collections
 #import sklearn.utils
@@ -43,7 +44,7 @@ Const.__setattr__("TARGETUSELESS", "\n无效目标词 continue")
 Const.__setattr__("KEYLOSS", "\n无该key continue")
 Const.__setattr__("CLASSIFY_BATCH", "\n输出分类样本batch")
 Const.__setattr__("DICT_LOST", "\n该词语在词典中并不存在")
-Const.__setattr__("DEBUG", "False")
+Const.__setattr__("DEBUG", True)
 Const.str2var()
 
 global SAMPLE_CNT
@@ -136,9 +137,9 @@ class Data_Helper(object):
         #self.w2vm = bilstm.w2vm.load_w2vm()
         self.btsize=32
         self.mongo_inf_init("myDB", "gz_gongan_alarm_1617")
-        self.w2vm = gensim.models.word2vec.Word2Vec.load("./model/w2vm")
+        self.w2vm = gensim.models.word2vec.Word2Vec.load("/home/distdev/bilstm/model/w2vm")
         #self.dct = gensim.corpora.Dictionary.load("./model/myDctBak")
-        self.dct = gensim.corpora.Dictionary.load("./model/my.dct.bak")
+        self.dct = gensim.corpora.Dictionary.load("/home/distdev/bilstm/model/myDctBak")
         #self.ac =addr_classify.Addr_Classify(["2016年1月1日9时左右，报警人文群华在股市云岩区保利云山国际13栋1楼冬冬小区超市被撬门进入超市盗走现金1200元及一些食品等物品。技术科民警已经出现场勘查。"])
         self.train_data_generator = self.gen_train_data('train')
         self.eval_data_generator = self.gen_train_data("eval")
@@ -787,8 +788,9 @@ class Data_Helper(object):
 
     def read_file_2d_lst(self,dirpath,filename):
         f = open(os.path.join(dirpath,filename))
-        cont = f.read()
-        lines = cont.split("[\n\r]")
+        #cont = f.read()
+        #lines = cont.split("\n")
+        lines = f.readlines()
         print(lines[:3])
         y_lst = []
         x_lst = []
@@ -811,6 +813,7 @@ class Data_Helper(object):
             return np.array([-1]*128)
 
     def words_2_vecs(self,words):
+        ids = []
         self._vali_type(words, list)
         while(1):
             for word in words:
@@ -818,8 +821,9 @@ class Data_Helper(object):
             self._vali_equal(len(ids),len(words),"==","words_2_ids")
         return ids
 
-    def words_2_ids(self,words):
-        self._vali_type(words, list)
+    def words_2_ids(self,words, name):
+        ids = []
+        self._vali_type(words, list, name)
         while(1):
             try:
                 for word in words:
@@ -846,26 +850,34 @@ class Data_Helper(object):
         return c2n,n2c
 
     def dataGenTrain(self, begin_cursor=100,dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data',filename='train.txt.bak',textcol='text',targetcol='addrcrim',funcname='gen_train_text_classify_from_text'):
+            funcname = "dataGenTrain"
             res = []
             c2n,n2c=self.get_lb()
             _print('this is the func gen_train_text_classify_from_text')
             words2dlst,y_inputs = self.read_file_2d_lst(dirpath,filename)
+            if Const.DEBUG == True:
+                pdb.set_trace()
             count=len(words2dlst)
             end_cursor = count
-            self._vali_equal(count,begin_cursor,">","gen_train_text_classify_from_text")
-            self._vali_equal(end_cursor,begin_cursor,">",'gen_train_text_classify_from_text')#断言end_cursor>begin_cursor
+            #_vali_equal(count,begin_cursor,'>','dataGenTrain')
+            if Const.DEBUG == True:
+                pdb.set_trace()
+            self._vali_equal(count,begin_cursor,">","dataGenTrain")
+            self._vali_equal(end_cursor,begin_cursor,">",'dataGenTrain')#断言end_cursor>begin_cursor
             #ev = bilstm.eval_bilstm.Eval_Ner()
             #get_mongo_coll( 'myDB', "traindata")
             #_cursor = _collections.find()
             ll = self.random_lst([i for i in range(begin_cursor, end_cursor)])# shuffle list
             print("\n>len ll after random: ",len(ll))
             print("\n>ll:",ll[:10])
+            if Const.DEBUG == True:
+                pdb.set_trace()
             for c in ll:
                 #print("\n> this is the num",c,'sentence')
                 self._vali_type(c,int,funcname)#断言c是int型数据格式
                 #===== 过滤掉字段不全的文本
                 sent = words2dlst[c]
-                _words_id = words_2_ids(sent)
+                _words_id = self.words_2_ids(sent,funcname)
                 tag = y_inputs[c]
                 _tag_id = c2n[tag]
                 yield _words_id,_tag_id,words2dlst[c],tag #
@@ -1005,7 +1017,7 @@ class Data_Helper(object):
                 if items == None:
                     items = []
                 if len(items)>0:
-                    passpdb.set_trace()
+                    pdb.set_trace()
                 items_copy = items.copy()
                 items_copy2 = items.copy()
                 print("\n> items_copy", items_copy)
@@ -1091,5 +1103,5 @@ def main():
 if __name__ == "__main__":
     dh=Data_Helper()
     gen = dh.dataGenTrain(begin_cursor=100,dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data',filename='train.txt.bak',textcol='text',targetcol='addrcrim',funcname='gen_train_text_classify_from_text')
-    gen.__next__()
+    res = gen.__next__()
 

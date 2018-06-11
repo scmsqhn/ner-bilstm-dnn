@@ -8,7 +8,6 @@ import sys
 import re
 import pdb
 import queue
-import traceback
 
 global LASTSPACENUM
 LASTSPACENUM = queue.LifoQueue(maxsize = 20)
@@ -165,12 +164,11 @@ def formatCode(readFileName, removeNote=True):
 
 def getConfig(ini):
     try:
-        print("> getConfig: ")
         cfg = configparser.ConfigParser()
         cfg.readfp(open(ini))
         print(cfg.sections())
     except:
-        traceback.print_exc()
+        pass
 
 if __name__=='__main__':
     parser = optparse.OptionParser()
@@ -198,9 +196,15 @@ if __name__=='__main__':
         default=True,
         help="don't print status messages to stdout"
         )
+    parser.add_option(
+        "-r",
+        "--login",
+        dest="login",
+        action="call_back",
+        dest=""
+        default=True,
+        help="log in some server"
     (options, args) = parser.parse_args()
-    print("\"options, args\"")
-    print(options, args)
     getConfig(options.ini)
     print(args)
 

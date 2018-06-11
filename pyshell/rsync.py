@@ -2,13 +2,14 @@
 
 import configparser
 import optparse
-import subprocess as cmd
+import subprocess
 import os
 import sys
 import re
 import pdb
 import queue
 import traceback
+import subprocess
 
 global LASTSPACENUM
 LASTSPACENUM = queue.LifoQueue(maxsize = 20)
@@ -174,33 +175,29 @@ def getConfig(ini):
 
 if __name__=='__main__':
     parser = optparse.OptionParser()
-
     parser.add_option(
-        "-i",
-        "--ini",
-        dest="ini",
-        default="config.ini",
-        help="read config from INI file",
-        metavar="INI"
+        "-s",
+        "--src",
+        dest="src",
+        #default="config.ini",
+        help="logging server",
         )
     parser.add_option(
-        "-f",
-        "--file",
-        dest="filename",
-        help="write report to FILE",
-        metavar="FILE"
-        )
-    parser.add_option(
-        "-q",
-        "--quiet",
-        dest="verbose",
-        action="store_false",
-        default=True,
-        help="don't print status messages to stdout"
+        "-d",
+        "--dest",
+        dest="dest",
+        #default="config.ini",
+        help="logging server",
         )
     (options, args) = parser.parse_args()
     print("\"options, args\"")
+    src = optionsp['src']
+    dest = optionsp['dest']
+    cmd = "rsync -av 'ssh -p 15002' distdev@113.204.229.74:/home/distdev/bilstm/release "
+
+    subprocess.Popen()
+
     print(options, args)
-    getConfig(options.ini)
+    #getConfig(options.ini)
     print(args)
 
