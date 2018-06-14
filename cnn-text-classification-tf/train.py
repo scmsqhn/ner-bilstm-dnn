@@ -7,10 +7,12 @@ import time
 import datetime
 import sys
 sys.path.append("/home/distdev")
-import bilstm
-from bilstm import datahelper as data_helpers
+#import bilstm
+#from bilstm import datahelper as data_helpers
 from text_cnn import TextCNN
 from tensorflow.contrib import learn
+import pdb
+#from datahelper import Data_Helper
 
 # Parameters
 # ==================================================
@@ -22,29 +24,38 @@ tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity
 
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 128)")
-tf.flags.DEFINE_string("filter_sizes", "3,4,5", "Comma-separated filter sizes (default: '3,4,5')")
+tf.flags.DEFINE_string("filter_sizes", "3,4", "Comma-separated filter sizes (default: '3,4,5')")
 tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
 tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
 tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 0.0)")
 
 # Training parameters
-tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
+tf.flags.DEFINE_integer("batch_size", 32, "Batch Size (default: 64)")
 tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
 tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
-tf.flags.DEFINE_integer("checkpoint_every", 100, "Save model after this many steps (default: 100)")
+tf.flags.DEFINE_integer("checkpoint_every", 1000, "Save model after this many steps (default: 100)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
 
 FLAGS = tf.flags.FLAGS
+
 # FLAGS._parse_flags()
 # print("\nParameters:")
 # for attr, value in sorted(FLAGS.__flags.items()):
 #     print("{}={}".format(attr.upper(), value))
 # print("")
 
-data_helpers = data_helpers.Data_Helper()
+
+import datahelper
+global batches
+dh=datahelper.Data_Helper()
+gen = dh.dataGenTrain(begin_cursor=100, dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data', filename='train.txt.bak', textcol='text', targetcol='addrcrim', funcname='gen_train_text_classify_from_text')
+batches = datahelper.batches_iter(gen)
+
+#data_helpers = data_helpers.Data_Helper()
+
 """
 def preprocess():
     # Data Preparation
@@ -77,30 +88,36 @@ def preprocess():
     print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
     return x_train, y_train, vocab_processor, x_dev, y_dev
 """
+
 def train():
     # Training
     # ==================================================
-
     with tf.Graph().as_default():
         session_conf = tf.ConfigProto(
           allow_soft_placement=FLAGS.allow_soft_placement,
           log_device_placement=FLAGS.log_device_placement)
         sess = tf.Session(config=session_conf)
+
         with sess.as_default():
             cnn = TextCNN(
                 sequence_length=200,
                 num_classes=18,
-                vocab_size=100000,
+                vocab_size = 500000,
                 embedding_size=FLAGS.embedding_dim,
                 filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
                 num_filters=FLAGS.num_filters,
                 l2_reg_lambda=FLAGS.l2_reg_lambda)
 
             # Define Training procedure
-            global_step = tf.Variable(0, name="global_step", trainable=False)
-            optimizer = tf.train.AdamOptimizer(1e-3)
+            #global_step = tf.Variable(0, name="global_step", trainable=False)
+            global_step = tf.train.get_or_create_global_step()
+            optimizer = tf.train.AdamOptimizer(1e-4)
             grads_and_vars = optimizer.compute_gradients(cnn.loss)
-            train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+            train_op = optimizer.apply_gradients(grads_and_vars, global_step=tf.train.get_or_create_global_step())
+            #train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+
+            #tf.contrib.framework.get_or_create_global_step())
+            #global_step = tf.contrib.framework.get_or_create_global_step()
 
             # Keep track of gradient values and sparsity (optional)
             grad_summaries = []
@@ -153,11 +170,17 @@ def train():
                   cnn.input_y: y_batch,
                   cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
-                _, step, summaries, loss, accuracy = sess.run(
-                    [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
+                _, step, summaries, loss, accuracy, y_pred , scores, corr, embed_chars= sess.run(
+                    [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy, cnn.predictions, cnn.scores, cnn.correct_predictions, cnn.embedded_chars_expanded],
                     feed_dict)
+                import pdb
+                pdb.set_trace()
                 time_str = datetime.datetime.now().isoformat()
-                print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+                #print("{}: step {}, loss {:g}, acc {:g}, ".format(time_str, step, loss, accuracy))
+                #print("{}: step {}, correct_predict{}, ".format(time_str, step, corr))
+                #print("{}: step {}, input_y{}, scores{}, ".format(time_str, step, y_batch, scores))
+                #print(type(scores[0][0]))
+                #print("{}: step {}, input_y{}, pred_y{}, ".format(time_str, step, y_batch, y_pred))
                 train_summary_writer.add_summary(summaries, step)
 
             def dev_step(x_batch, y_batch, writer=None):
@@ -169,28 +192,36 @@ def train():
                   cnn.input_y: y_batch,
                   cnn.dropout_keep_prob: 1.0
                 }
-                step, summaries, loss, accuracy = sess.run(
-                    [global_step, dev_summary_op, cnn.loss, cnn.accuracy],
+                [_, step, summaries, loss, accuracy, scores, corr, pred_y]= sess.run(
+                    [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy, cnn.scores, cnn.correct_predictions, cnn.predictions],
                     feed_dict)
                 time_str = datetime.datetime.now().isoformat()
-                print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+                print("{}: step {}, loss {:g}, acc {:g}, ".format(time_str, step, loss, accuracy))
+                print("{}: step {}, input_y {}, pred_y {}, ".format(time_str, step, y_batch, pred_y))
+                print("{}: step {}, scores{}, ".format(time_str, step, scores[1]))
                 if writer:
                     writer.add_summary(summaries, step)
-
             # Generate batches
-            gen = data_helpers.dataGenTrain(begin_cursor=100, dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data', filename='train.txt.bak', textcol='text', targetcol='addrcrim', funcname='gen_train_text_classify_from_text')
-            batches = data_helpers.batch_iter(gen)
             # Training loop. For each batch...
             #for batch in batches:
             while(1):
-                batch = batches.__next__()
-                x_batch, y_batch = zip(*batch)
+                batch = ""
+                global batches
+                try:
+                    batch = batches.__next__()
+                except StopIteration:
+                    batches = datahelper.batches_iter(gen)
+                    batch = batches.__next__()
+
+                #pdb.set_trace()
+                x_batch, y_batch = batch[0], batch[1]
+                x_dev, y_dev= x_batch,y_batch
                 train_step(x_batch, y_batch)
                 current_step = tf.train.global_step(sess, global_step)
                 if current_step % FLAGS.evaluate_every == 0:
                     print("\nEvaluation:")
                     dev_step(x_dev, y_dev, writer=dev_summary_writer)
-                    print("")
+                    #train_step(x_batch, y_batch)
                 if current_step % FLAGS.checkpoint_every == 0:
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                     print("Saved model checkpoint to {}\n".format(path))

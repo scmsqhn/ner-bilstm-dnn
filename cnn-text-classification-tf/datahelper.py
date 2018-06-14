@@ -44,7 +44,7 @@ Const.__setattr__("TARGETUSELESS", "\n无效目标词 continue")
 Const.__setattr__("KEYLOSS", "\n无该key continue")
 Const.__setattr__("CLASSIFY_BATCH", "\n输出分类样本batch")
 Const.__setattr__("DICT_LOST", "\n该词语在词典中并不存在")
-Const.__setattr__("DEBUG", True)
+Const.__setattr__("DEBUG", False)
 Const.str2var()
 
 global SAMPLE_CNT
@@ -57,7 +57,7 @@ with open("./stop_word.txt","r")as f:
     for line in lines:
         STOP_WORD.append(line)
 print(STOP_WORD[:2])
-"""
+##"""
 
 def logging_init(filename="./logger.log"):
     logger = logging.getLogger("bilstm_train.logger")
@@ -796,12 +796,12 @@ class Data_Helper(object):
         x_lst = []
         for line in lines:
             try:
-                y_lst = line.split("\t")[0]
-                x_lst = line.split("\t")[1]
+                y_lst.append(line.split("\t")[0])
+                x_lst.append(line.split("\t")[1])
             except:
                 continue
         clr_lines = [self.dwc(line) for line in x_lst]
-        cuts_words = [jieba.cut(line) for line in clr_lines]
+        cuts_words = [list(jieba.cut(line)) for line in clr_lines]
         #self._vali_equal(len(lines), len(cuts_words), "==")
         #pdb.set_trace()
         return cuts_words, y_lst
@@ -823,19 +823,19 @@ class Data_Helper(object):
 
     def words_2_ids(self,words, name):
         ids = []
-        self._vali_type(words, list, name)
-        while(1):
-            try:
-                for word in words:
-                    try:
-                        ids.append(self.dct.token2id[word])
-                    except:
-                        ids.append(self.dct.token2id[" "])
-                self._vali_equal(len(ids),len(words),"==","words_2_ids")
-                return ids
-            except KeyError:
-                #self.dct.add_documents([words])
-                continue
+        #self._vali_type(words, list, name)
+        #pdb.set_trace()
+        for i in range(200):#words:
+            if i > len(words)-1:
+                ids.append(self.dct.token2id[" "])
+            else:
+                try:
+                    word = words[i]
+                    ids.append(self.dct.token2id[word])
+                except KeyError:
+                    ids.append(self.dct.token2id[" "])
+        #self._vali_equal(len(ids),len(words),"==","words_2_ids")
+        return ids
 
     def get_lb(self):
         filepath = "/home/distdev/iba/dmp/gongan/shandong_crim_classify/data/lb.txt"
@@ -872,15 +872,21 @@ class Data_Helper(object):
             print("\n>ll:",ll[:10])
             if Const.DEBUG == True:
                 pdb.set_trace()
+            sent_id = []
+            tags_id = []
             for c in ll:
                 #print("\n> this is the num",c,'sentence')
-                self._vali_type(c,int,funcname)#断言c是int型数据格式
+                #self._vali_type(c,int,funcname)#断言c是int型数据格式
                 #===== 过滤掉字段不全的文本
                 sent = words2dlst[c]
-                _words_id = self.words_2_ids(sent,funcname)
+                _words_id = self.words_2_ids(sent, funcname)
                 tag = y_inputs[c]
                 _tag_id = c2n[tag]
-                yield _words_id,_tag_id,words2dlst[c],tag #
+                sent_id.extend(_words_id)
+                tags_id.extend([_tag_id])
+                #words2idlst.extend(sent)
+            return sent_id, tags_id
+            #return sent_id, tags_id, words2dlst
 
     def toArr(self,lst,x,y):
         #import pdb
@@ -1100,8 +1106,22 @@ def main():
     #clr_addrcrim_sum()
     #combine_all()
 
+def batches_iter(gen):
+    lenth = len(gen[0])
+    print(lenth//6400)
+    #pdb.set_trace()
+    for i in range(lenth//6400):
+        #pdb.set_trace()
+        _x = gen[0][6400*i:6400*(i+1)]
+        _y = gen[1][32*i:32*(i+1)]
+        #pdb.set_trace()
+        x = np.array(_x).reshape(32,200)
+        y = np.array(_y).reshape(32)
+        yield (x,y)
+
 if __name__ == "__main__":
     dh=Data_Helper()
     gen = dh.dataGenTrain(begin_cursor=100,dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data',filename='train.txt.bak',textcol='text',targetcol='addrcrim',funcname='gen_train_text_classify_from_text')
-    res = gen.__next__()
+    pdb.set_trace()
+    #res = gen.__next__()
 

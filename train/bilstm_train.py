@@ -241,10 +241,9 @@ class Train_Bilstm_Ner(object):
     def fit(self, to_fetch)
         X_batch, y_batch = self.datahelper.next_batch()
         feed_dict = {self.model.X_inputs:X_batch, self.model.y_inputs:y_batch, self.model.lr:self.model._lr, self.model.batch_size:10, self.model.keep_prob:0.5}
-
     """
-    def att_train(self):
 
+    def att_train(self):
         # Define Training procedure
         cnn = self.att_layer
         self.att_layer.global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -254,7 +253,6 @@ class Train_Bilstm_Ner(object):
         self.att_layer.optimizer = optimizer
 
     def train_step_att(self, x_bh, y_bh, sess):
-
             """
             A single training step
             """
@@ -269,7 +267,6 @@ class Train_Bilstm_Ner(object):
             return  result
 
 class Bilstm_Att(object):
-
     def __init__(self, data_helper):
         pass
         self.init_model_para()
@@ -292,15 +289,12 @@ class Bilstm_Att(object):
         self._lr_last_last = 1e-2
         self._lr_last = 1e-2
         print("调整lr",self._lr)
-
         #self.cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
         tvars=tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars), self.max_grad_norm)  # 获取损失函数对于每个参数的梯度
         optimizer = tf.train.AdamOptimizer(learning_rate=self._lr)   # 优化器
         self.train_op = optimizer.apply_gradients(list(zip(grads, tvars)), global_step=tf.train.get_or_create_global_step())
-
         self.save_graph_meta()
-
 
     def init_ckpt(self):
         ckpt = tf.train.get_checkpoint_state('./model/')
@@ -337,6 +331,7 @@ class Bilstm_Att(object):
             elif varName == j:
                 return i
         return -1
+
     def tag_map(self, pred_lst_1d):#[0:7]
         #print(pred_lst_1d)
         _ = list(pred_lst_1d)
