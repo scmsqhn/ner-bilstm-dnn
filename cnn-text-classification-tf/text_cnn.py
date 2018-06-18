@@ -3,6 +3,8 @@
 import tensorflow as tf
 import numpy as np
 
+DEBUG = True
+
 class TextCNN(object):
     """
     A CNN for text classification.
@@ -26,17 +28,20 @@ class TextCNN(object):
             self.embedded_chars = tf.nn.embedding_lookup(self.W, self.input_x)
             self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
         import pdb
-        pdb.set_trace()
+        if DEBUG:
+            pdb.set_trace()
 
         # Create a convolution + maxpool layer for each filter size
         pooled_outputs = []
         for i, filter_size in enumerate(filter_sizes):
             with tf.name_scope("conv-maxpool-%s" % filter_size):
                 # Convolution Layer
-                filter_shape = [filter_size, embedding_size, 1, num_filters]
+                filter_shape = [filter_size, embedding_size, 1, 1]
+                #filter_shape = [filter_size, embedding_size, 1, num_filters]
                 print('filter_shape', filter_shape)
                 import pdb
-                pdb.set_trace()
+                if DEBUG:
+                    pdb.set_trace()
                 W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
                 b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
                 conv = tf.nn.conv2d(
@@ -45,21 +50,29 @@ class TextCNN(object):
                     strides=[1, 1, 1, 1],
                     padding="VALID",
                     name="conv")
-                # Apply nonlinearity
-                pdb.set_trace()
+                if DEBUG:
+                    # Apply nonlinearity
+                    pdb.set_trace()
                 h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
                 # Maxpooling over the outputs
-                pooled = tf.nn.max_pool(
+                pooled = tf.nn.avg_pool(
                     h,
-                    ksize=[1, sequence_length - filter_size + 1, 1, 1],
+                    ksize=[1, filter_size + 1, 1, 1],
+                    #ksize=[1, sequence_length - filter_size + 1, 1, 1],
                     strides=[1, 1, 1, 1],
                     padding='VALID',
                     name="pool")
+                if DEBUG:
+                    pdb.set_trace()
                 pooled_outputs.append(pooled)
+        pooled_outputs.append(tf.reshape(self.embedded_chars_expanded, (32,200*128,1,1)))
 
         # Combine all the pooled features
-        num_filters_total = num_filters * len(filter_sizes)
-        self.h_pool = tf.concat(pooled_outputs, 3)
+        num_filters_total = 197+195+200*128#200+198+197#num_filters * len(filter_sizes)
+        #self.h_pool_flat = pooled_outputs
+        self.h_pool = tf.concat(pooled_outputs, 1)
+        if DEBUG:
+            pdb.set_trace()
         self.h_pool_flat = tf.reshape(self.h_pool, [-1, num_filters_total])
 
         # Add dropout
@@ -76,8 +89,10 @@ class TextCNN(object):
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
             self._scores = tf.nn.xw_plus_b(self.h_drop, W, b, name="scores")
+            if DEBUG:
+                pdb.set_trace()
             self.scores = tf.cast(tf.reshape(self._scores, [32,18]), tf.float32)
-            self.predictions = tf.argmax(self.scores, 1)
+            self.predictions = tf.argmax(self.scores, 1, name='predictions')
             #self.predictions = tf.cast(tf.argmax(tf.cast(self.scores, tf.float32), 1), tf.int32, name="predictions")
             #self.predictions = tf.arg_max(self.scores, 1, name="predictions")
 
@@ -102,13 +117,17 @@ class TextCNN(object):
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
             #self.cost= tf.cast(self.accuracy, tf.float32)
             self.correct_predictions = correct_predictions
-            self.loss = self.loss  * 0.01+ (100 / (self.accuracy+0.01))
+            self.loss = self.loss  * (10 / (self.accuracy+0.01))
 
 
     def fscore(self, labels, logits): # y y_
         y = tf.cast(tf.reshape(labels, [-1]), tf.int32)
+
         y_ = tf.cast(tf.argmax(logits, 1), tf.int32)
-        # pdb.set_trace()
+        if DEBUG:
+            import pdb
+            pdb.set_trace()
+            pass
         ylbEqPred = tf.cast(tf.equal(y,y_),tf.int32)
         ylbEqZero = tf.cast(tf.equal(y,0),tf.int32)
         ylbGthZero = tf.cast(tf.greater(y,0),tf.int32)

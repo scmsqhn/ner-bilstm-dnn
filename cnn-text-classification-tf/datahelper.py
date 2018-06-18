@@ -849,7 +849,7 @@ class Data_Helper(object):
             n2c[i]=j
         return c2n,n2c
 
-    def dataGenTrain(self, begin_cursor=100,dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data',filename='train.txt.bak',textcol='text',targetcol='addrcrim',funcname='gen_train_text_classify_from_text'):
+    def dataGenTrain(self, shuffle=True, begin_cursor=100,dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data',filename='train.txt.bak',textcol='text',targetcol='addrcrim',funcname='gen_train_text_classify_from_text'):
             funcname = "dataGenTrain"
             res = []
             c2n,n2c=self.get_lb()
@@ -867,7 +867,11 @@ class Data_Helper(object):
             #ev = bilstm.eval_bilstm.Eval_Ner()
             #get_mongo_coll( 'myDB', "traindata")
             #_cursor = _collections.find()
-            ll = self.random_lst([i for i in range(begin_cursor, end_cursor)])# shuffle list
+            ll = []
+            if shuffle:
+                ll = self.random_lst([i for i in range(begin_cursor, end_cursor)])# shuffle list
+            else:
+                ll = [i for i in range(begin_cursor, end_cursor)]
             print("\n>len ll after random: ",len(ll))
             print("\n>ll:",ll[:10])
             if Const.DEBUG == True:

@@ -24,8 +24,8 @@ tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity
 
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 128)")
-tf.flags.DEFINE_string("filter_sizes", "3,4", "Comma-separated filter sizes (default: '3,4,5')")
-tf.flags.DEFINE_integer("num_filters", 128, "Number of filters per filter size (default: 128)")
+tf.flags.DEFINE_string("filter_sizes", "2,3", "Comma-separated filter sizes (default: '1,2,3')")
+tf.flags.DEFINE_integer("num_filters", 1, "Number of filters per filter size (default: 128)")
 tf.flags.DEFINE_float("dropout_keep_prob", 0.5, "Dropout keep probability (default: 0.5)")
 tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 0.0)")
 
@@ -50,10 +50,13 @@ FLAGS = tf.flags.FLAGS
 
 import datahelper
 global batches
+global evalbatches
 dh=datahelper.Data_Helper()
-gen = dh.dataGenTrain(begin_cursor=100, dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data', filename='train.txt.bak', textcol='text', targetcol='addrcrim', funcname='gen_train_text_classify_from_text')
+gen = dh.dataGenTrain(begin_cursor=0, dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data', filename='train.txt.bak', textcol='text', targetcol='addrcrim', funcname='gen_train_text_classify_from_text')
 batches = datahelper.batches_iter(gen)
 
+evalgen = dh.dataGenTrain(begin_cursor=0, dirpath='/home/distdev/src/iba/dmp/gongan/shandong_crim_classify/data', filename='eval.txt.bak', textcol='text', targetcol='addrcrim', funcname='gen_train_text_classify_from_text')
+evalbatches = datahelper.batches_iter(evalgen)
 #data_helpers = data_helpers.Data_Helper()
 
 """
@@ -111,7 +114,7 @@ def train():
             # Define Training procedure
             #global_step = tf.Variable(0, name="global_step", trainable=False)
             global_step = tf.train.get_or_create_global_step()
-            optimizer = tf.train.AdamOptimizer(1e-4)
+            optimizer = tf.train.AdamOptimizer(1e-3)
             grads_and_vars = optimizer.compute_gradients(cnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=tf.train.get_or_create_global_step())
             #train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
@@ -174,13 +177,13 @@ def train():
                     [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy, cnn.predictions, cnn.scores, cnn.correct_predictions, cnn.embedded_chars_expanded],
                     feed_dict)
                 import pdb
-                pdb.set_trace()
+                #pdb.set_trace()
                 time_str = datetime.datetime.now().isoformat()
-                #print("{}: step {}, loss {:g}, acc {:g}, ".format(time_str, step, loss, accuracy))
+                print("{}: step {}, loss {:g}, acc {:g}, ".format(time_str, step, loss, accuracy))
                 #print("{}: step {}, correct_predict{}, ".format(time_str, step, corr))
                 #print("{}: step {}, input_y{}, scores{}, ".format(time_str, step, y_batch, scores))
                 #print(type(scores[0][0]))
-                #print("{}: step {}, input_y{}, pred_y{}, ".format(time_str, step, y_batch, y_pred))
+                print("{}: step {}, \ninput_y{}, \npred_y{}, ".format(time_str, step, y_batch, y_pred))
                 train_summary_writer.add_summary(summaries, step)
 
             def dev_step(x_batch, y_batch, writer=None):
@@ -197,7 +200,7 @@ def train():
                     feed_dict)
                 time_str = datetime.datetime.now().isoformat()
                 print("{}: step {}, loss {:g}, acc {:g}, ".format(time_str, step, loss, accuracy))
-                print("{}: step {}, input_y {}, pred_y {}, ".format(time_str, step, y_batch, pred_y))
+                print("{}: step {}, \ninput_y {}, \npred_y {}, ".format(time_str, step, y_batch, pred_y))
                 print("{}: step {}, scores{}, ".format(time_str, step, scores[1]))
                 if writer:
                     writer.add_summary(summaries, step)
@@ -215,11 +218,20 @@ def train():
 
                 #pdb.set_trace()
                 x_batch, y_batch = batch[0], batch[1]
-                x_dev, y_dev= x_batch,y_batch
                 train_step(x_batch, y_batch)
                 current_step = tf.train.global_step(sess, global_step)
                 if current_step % FLAGS.evaluate_every == 0:
+                    x_dev, y_dev= x_batch,y_batch
                     print("\nEvaluation:")
+                    global evalbatches
+                    batch = ""
+                    try:
+                        batch = evalbatches.__next__()
+                    except StopIteration:
+                        evalbatches = datahelper.batches_iter(evalgen)
+                        batch = evalbatches.__next__()
+                    #pdb.set_trace()
+                    x_dev, y_dev = batch[0], batch[1]
                     dev_step(x_dev, y_dev, writer=dev_summary_writer)
                     #train_step(x_batch, y_batch)
                 if current_step % FLAGS.checkpoint_every == 0:

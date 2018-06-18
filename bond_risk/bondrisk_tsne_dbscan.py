@@ -567,9 +567,9 @@ def dbscan(low_dim_embs,df):#filepath="./low_dim_embs.csv"):
     #print(df)
     dbscan = sklearn.cluster.DBSCAN(eps=0.4,min_samples=5,metric='euclidean',algorithm='auto',leaf_size=30,p=None)#,random_state=None)
     y_pred = dbscan.fit_predict(low_dim_embs)
-    plt.scatter(low_dim_embs[:, 0], low_dim_embs[:, 1], c=y_pred)
+    #plt.scatter(low_dim_embs[:, 0], low_dim_embs[:, 1], c=y_pred)
     _t = time.time()
-    plt.savefig("dbscan%s.png"%str(_t))
+    #plt.savefig("dbscan%s.png"%str(_t))
     #plt.show()
     return y_pred, df
 
