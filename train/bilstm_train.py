@@ -241,9 +241,10 @@ class Train_Bilstm_Ner(object):
     def fit(self, to_fetch)
         X_batch, y_batch = self.datahelper.next_batch()
         feed_dict = {self.model.X_inputs:X_batch, self.model.y_inputs:y_batch, self.model.lr:self.model._lr, self.model.batch_size:10, self.model.keep_prob:0.5}
-    """
 
+    """
     def att_train(self):
+
         # Define Training procedure
         cnn = self.att_layer
         self.att_layer.global_step = tf.Variable(0, name="global_step", trainable=False)
@@ -253,6 +254,7 @@ class Train_Bilstm_Ner(object):
         self.att_layer.optimizer = optimizer
 
     def train_step_att(self, x_bh, y_bh, sess):
+
             """
             A single training step
             """
@@ -267,6 +269,7 @@ class Train_Bilstm_Ner(object):
             return  result
 
 class Bilstm_Att(object):
+
     def __init__(self, data_helper):
         pass
         self.init_model_para()
@@ -289,12 +292,15 @@ class Bilstm_Att(object):
         self._lr_last_last = 1e-2
         self._lr_last = 1e-2
         print("调整lr",self._lr)
+
         #self.cost = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
         tvars=tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars), self.max_grad_norm)  # 获取损失函数对于每个参数的梯度
         optimizer = tf.train.AdamOptimizer(learning_rate=self._lr)   # 优化器
         self.train_op = optimizer.apply_gradients(list(zip(grads, tvars)), global_step=tf.train.get_or_create_global_step())
+
         self.save_graph_meta()
+
 
     def init_ckpt(self):
         ckpt = tf.train.get_checkpoint_state('./model/')
@@ -331,7 +337,6 @@ class Bilstm_Att(object):
             elif varName == j:
                 return i
         return -1
-
     def tag_map(self, pred_lst_1d):#[0:7]
         #print(pred_lst_1d)
         _ = list(pred_lst_1d)
@@ -470,14 +475,14 @@ class Bilstm_Att(object):
         self.hidden_size = 256# 隐含层节点数
         self.layer_num = 4        # bi-lstm 层数
         self.max_grad_norm = 9.0  # 最大梯度（超过此值的梯度将被裁剪）
-        self.model_save_path = _path("model/crimAddrBilstm.ckpt") # 模型保存位置
+        self.model_save_path = _path("model/ner_addr_classify.ckpt") # 模型保存位置
         self.checkpoint_path = _path("model")  # 模型保存位置
         _print(self.model_save_path)
         _print(self.checkpoint_path)
         self.lastcost = 0.0
-        self.tf_batch_num  = 300
+        self.tf_batch_num  = 500
         self.max_epoch = 30
-        self.max_max_epoch = 6000
+        self.max_max_epoch = 60
         self.btsize = 32
 
 # ====================== model inout=====================
@@ -630,7 +635,6 @@ class Bilstm_Att(object):
         outp= tf.matmul(inp, softmax_w) + softmax_b
         return tf.cast(outp,dtype)
 
-
     def fscore(self, labels, logits): # y y_
         y = tf.cast(tf.reshape(labels, [-1]), tf.int32)
         y_ = tf.cast(tf.argmax(logits, 1), tf.int32)
@@ -652,11 +656,11 @@ class Bilstm_Att(object):
         Recall= tf.divide(TP, tf.add(TP,FN))
         Fscore = tf.divide(tf.multiply(Precision, Recall), tf.add(Precision, Recall))
         squareFscore = tf.multiply(Fscore, Fscore)
-        threeMulFscore = tf.multiply(squareFscore, Fscore)
-        forMulFscore = tf.multiply(threeMulFscore, Fscore)
+        #threeMulFscore = tf.multiply(squareFscore, Fscore)
+        #forMulFscore = tf.multiply(threeMulFscore, Fscore)
         #fourMulFscore = tf.multiply(threeMulFscore, Fscore) # if u wanna fscore more effection modify here
         """ this to make the fscore more important before close enought to zero """
-        floss= tf.divide(10, forMulFscore)
+        floss= tf.divide(10, squareFscore)
         return TP, FP, TN, FN, Precision, Recall, floss
 
     def init_model_struct(self):
@@ -729,38 +733,122 @@ class Bilstm_Att(object):
     def dct_mod(self,kx5i, lbs):
         tf.sum(lbs)
 
+    """
+    def att_patten(self,inp,shape0,shape1,shape2,shape3,shape4,shape5,shape6):
+        char = self.reshape(att_inputs, shape0)
+        _char = self.init_multi_layer(chat, shape1, shape2, dtype=tf.float32)
+        weight = self.init_full_conn_layer(_char,  shape3, shape4, dtype=tf.float32) # (32*200*128, 3)
+        atte_res = self.init_full_conn_layer(weight,  shape5, shape6, dtype=tf.float32) # (32*200*128, 3)
+    """
     def init_attention_qdk(self, X_inputs, y_pred, vocab_size, btsize, timestep_size, embedding_size, class_num):
             tvm = timestep_size*embedding_size # 200 * 256
             tnm = timestep_size*class_num      # 200 * 3
             divide = tnm
             att_inputs = tf.cast(tf.reshape(tf.nn.embedding_lookup(self.embedding, X_inputs), [btsize, timestep_size*embedding_size]), tf.float32)
-            chatx5 = self.reshape(att_inputs, 5*128)
-            #chatx3 = self.reshape(att_inputs, 3*128)
-            #chatx7 = self.reshape(self.embedding,7*128)
-            #weightx3 = self.init_multi_layer(chatx3,1,3*128, dtype=tf.float32):
-            weightx5 = self.init_multi_layer(chatx5,1,5*128, dtype=tf.float32)
+            #chatx100 = self.reshape(att_inputs, 100*128)
+            #chatx40 = self.reshape(att_inputs, 40*128)
+            #chatx25 = self.reshape(att_inputs, 25*128)
+            chatx20 = self.reshape(att_inputs, 20*128)
+            #chatx10 = self.reshape(att_inputs, 10*128)
+            chatx8  = self.reshape(att_inputs, 8*128)
+            #chatx5  = self.reshape(att_inputs, 5*128)
+            #chatx4  = self.reshape(att_inputs, 4*128)
+            #chatx2  = self.reshape(att_inputs, 2*128)
 
-            #weightx7 = self.init_multi_layer(chatx7,1,7*128, dtype=tf.float32)
+            #_charx100 = self.init_multi_layer(chatx100,1, 100*128, dtype=tf.float32)
+            #_charx40 = self.init_multi_layer(chatx40,1, 40*128, dtype=tf.float32)
+            #_charx25 = self.init_multi_layer(chatx25,1, 25*128, dtype=tf.float32)
+            _charx20 = self.init_multi_layer(chatx20,1, 20*128, dtype=tf.float32)
+            #_charx10 = self.init_multi_layer(chatx10,1, 10*128, dtype=tf.float32)
+            _charx8 = self.init_multi_layer(chatx8, 1, 8*128, dtype=tf.float32)
+            #_charx5 = self.init_multi_layer(chatx5, 1, 5*128, dtype=tf.float32)
+            #_charx4 = self.init_multi_layer(chatx4, 1, 4*128, dtype=tf.float32)
+            #_charx2 = self.init_multi_layer(chatx2, 1, 2*128, dtype=tf.float32)
+
+            #weightx2 = self.init_full_conn_layer(_charx2,  2*128,  2*2*128,  dtype=tf.float32) # (32*200*128, 3)
+            #weightx4 = self.init_full_conn_layer(_charx4,  4*128,  2*4*128, dtype=tf.float32) # (32*200*128, 3)
+            #weightx5 = self.init_full_conn_layer(_charx5,  5*128,  2*5*128, dtype=tf.float32) # (32*200*128, 3)
+            weightx8 = self.init_full_conn_layer(_charx8,  8*128,  2*8*128, dtype=tf.float32) # (32*200*128, 3)
+            #weightx10 = self.init_full_conn_layer(_charx10, 10*128, 2*10*128, dtype=tf.float32) # (32*200*128, 3)
+            weightx20 = self.init_full_conn_layer(_charx20, 20*128, 2*20*128, dtype=tf.float32) # (32*200*128, 3)
+            #weightx25 = self.init_full_conn_layer(_charx25, 25*128, 2*25*128, dtype=tf.float32) # (32*200*128, 3)
+            #weightx40 = self.init_full_conn_layer(_charx40, 40*128, 2*40*128, dtype=tf.float32) # (32*200*128, 3)
+            #weightx100 = self.init_full_conn_layer(_charx100, 100*128, 2*100*128, dtype=tf.float32) # (32*200*128, 3)
+
             #atte_res_1 = tf.multiply(self.reshape(weightx3, [-1]), self.reshape(y_pred,(3,1))) # (32*200*128, 3)
-            atte_res_1 = self.init_full_conn_layer(weightx5, 5*128, 15, dtype=tf.float32) # (32*200*128, 3)
-            #atte_res_2 = self.init_full_conn_layer(weightx5, 7*128, 21, dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_1 = self.init_full_conn_layer(weightx2,  2*2*128,  6,  dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_2 = self.init_full_conn_layer(weightx4,  2*4*128,  12, dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_3 = self.init_full_conn_layer(weightx5,  2*5*128,  15, dtype=tf.float32) # (32*200*128, 3)
+            atte_res_4 = self.init_full_conn_layer(weightx8,  2*8*128,  24, dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_5 = self.init_full_conn_layer(weightx10, 2*10*128, 30, dtype=tf.float32) # (32*200*128, 3)
+            atte_res_6 = self.init_full_conn_layer(weightx20, 2*20*128, 60, dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_7 = self.init_full_conn_layer(weightx25, 2*25*128, 75, dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_8 = self.init_full_conn_layer(weightx40, 2*40*128, 120, dtype=tf.float32) # (32*200*128, 3)
+            #atte_res_9 = self.init_full_conn_layer(weightx100, 2*100*128, 300, dtype=tf.float32) # (32*200*128, 3)
             #atte_res_2 = tf.multiply(tf.reshape(weightx3,[-1]), tf.reshape(y_pred,[6400*3, 1])) # (32*200*128, 3)
             #atte_res_1 = tf.multiply(self.reshape(weightx3, [-1]), self.reshape(y_pred,(3,1))) # (32*200*128, 3)
             #pdb.set_trace()
-            self.attention1 = tf.reshape(atte_res_1,(6400,3))
-            #self.attention2 = tf.reshape(atte_res_1,(6400,3))
-            self.pred_1= tf.multiply(self.attention1, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
-            #self.pred_2= tf.multiply(self.attention2, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
-            self.attention= self.pred_1 # (32*200*128, 3)
-            #self.attention= tf.reduce_sum(self.pred1, self.pred2) # (32*200*128, 3)
+            #self.attention1 = tf.reshape(atte_res_1,(6400,3))
+            #self.attention2 = tf.reshape(atte_res_2,(6400,3))
+            #self.attention3 = tf.reshape(atte_res_3,(6400,3))
+            #self.attention4 = tf.reshape(atte_res_4,(6400,3))
+            #self.pred1 = tf.one_hot(tf.argmax(tf.reshape(atte_res_1,(6400,3)),1),3)
+            #self.pred2 = tf.one_hot(tf.argmax(tf.reshape(atte_res_2,(6400,3)),1),3)
+            #self.pred3 = tf.one_hot(tf.argmax(tf.reshape(atte_res_3,(6400,3)),1),3)
+            #self.pred4 = tf.one_hot(tf.argmax(tf.reshape(atte_res_4,(6400,3)),1),3)
+            #self.pred5 = tf.one_hot(tf.argmax(tf.reshape(atte_res_5,(6400,3)),1),3)
+            #self.pred6 = tf.one_hot(tf.argmax(tf.reshape(atte_res_6,(6400,3)),1),3)
+            #self.pred7 = tf.one_hot(tf.argmax(tf.reshape(atte_res_7,(6400,3)),1),3)
+            #self.pred8 = tf.one_hot(tf.argmax(tf.reshape(atte_res_8,(6400,3)),1),3)
+            #self.pred9 = tf.one_hot(tf.argmax(tf.reshape(atte_res_9,(6400,3)),1),3)
+            #self.pred1 = tf.reshape(atte_res_1,(6400,3))
+            #self.pred2 = tf.reshape(atte_res_2,(6400,3))
+            #self.pred3 = tf.reshape(atte_res_3,(6400,3))
+            #self.pred4 = tf.reshape(atte_res_4,(6400,3))
+            #self.pred5 = tf.reshape(atte_res_5,(6400,3))
+            #self.pred6 = tf.reshape(atte_res_6,(6400,3))
+            #self.pred7 = tf.reshape(atte_res_7,(6400,3))
+            #self.pred8 = tf.reshape(atte_res_8,(6400,3))
+            #self.pred9 = tf.reshape(atte_res_9,(6400,3))
+            #self.attention1 = tf.reshape(atte_res_1,(6400,3))
+            #self.attention2 = tf.reshape(atte_res_2,(6400,3))
+            #self.attention3 = tf.reshape(atte_res_3,(6400,3))
+            self.attention4 = tf.reshape(atte_res_4,(6400,3))
+            #self.attention5 = tf.reshape(atte_res_5,(6400,3))
+            self.attention6 = tf.reshape(atte_res_6,(6400,3))
+            # self.attention7 = tf.reshape(atte_res_7,(6400,3))
+            # self.attention8 = tf.reshape(atte_res_8,(6400,3))
+            # self.attention9 = tf.reshape(atte_res_9,(6400,3))
+            # h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
 
+            #self.pred1= tf.multiply(self.attention1, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            #self.pred2= tf.multiply(self.attention2, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            #self.pred3= tf.multiply(self.attention3, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            self.pred4= tf.multiply(self.attention4, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            #self.pred5= tf.multiply(self.attention5, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            self.pred6= tf.multiply(self.attention6, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            #self.pred7= tf.multiply(self.attention7, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            #self.pred8= tf.multiply(self.attention8, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            #self.pred9= tf.multiply(self.attention9, tf.reshape(y_pred,(6400,3))) # (32*200*128, 3)
+            #self.attention= self.pred_1 # (32*200*128, 3)
+            #self.part= tf.add(self.pred1, self.pred2) # (32*200*128, 3)
+            #self.part= tf.add(self.part, self.pred3) # (32*200*128, 3)
+            #self.part= tf.add(self.part, self.pred4) # (32*200*128, 3)
+            #self.part= tf.add(self.part, self.pred5) # (32*200*128, 3)
+            #self.part= tf.add(self.part, self.pred6) # (32*200*128, 3)
+            #self.part= tf.add(self.part, self.pred7) # (32*200*128, 3)
+            #self.attention= tf.add(self.part, self.pred8) # (32*200*128, 3)
+            self.att = tf.concat([self.pred4,self.pred6],1)
+            #self.att = tf.concat([self.pred1,self.pred2,self.pred3,self.pred4,self.pred5,self.pred6,self.pred7,self.pred8,self.pred9],1)
+            self.att2 = self.init_full_conn_layer(self.att,6,6,tf.float32)
+            #self.att2 = self.init_full_conn_layer(self.att,27,9,tf.float32)
+            self.attention = self.init_full_conn_layer(self.att2,6,3,tf.float32)
+            #self.attention = self.init_multi_layer(self.att, 6400, 21, dtype=tf.float32)
+            #self.attention = self.pred3
             #self.attention2 = tf.reshape(tf.reduce_mean(atte_res_2, 1), (6400,3))
-
             self.TP, self.FP, self.TN, self.FN ,self.Precision, self.Recall,self.Fscore = self.fscore(labels=self.y_inputs, logits=self.attention)
-
             self.loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels = tf.reshape(self.y_inputs, [-1]), logits = self.attention)) #self.attention))
             self.cost = tf.multiply(self.Fscore, self.loss)
-
             correct_prediction = tf.equal(tf.cast(tf.argmax(self.attention, 1), tf.int32), tf.reshape(self.y_inputs, [-1]))
             self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
             return self.cost
